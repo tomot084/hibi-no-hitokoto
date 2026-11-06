@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-yyNEKzasdF72r/WaOpJ80LSRp0l2KubdtLFdtdcln+o='; style-src 'sha256-H8yaePBesne+nj6VgWi7fxo+QnhOHa4PKt6jdOw8tGo='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-+CR+5t0yFRWjOD3C97ooduJk9MCIv9RrlJ5w0DWZWnY='; style-src 'sha256-H8yaePBesne+nj6VgWi7fxo+QnhOHa4PKt6jdOw8tGo='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -711,13 +711,19 @@ input[type="time"] { min-width: 0; width: 100%; font-variant-numeric: tabular-nu
       <p class="muted" id="gate-note"></p>
       <form id="owner-gate-form">
         <label class="field">
-          <span>自分用の合言葉</span>
+          <span id="owner-secret-label">数字4桁</span>
           <input type="password" id="passphrase" required maxlength="256" spellcheck="false">
         </label>
         <label class="field" id="confirm-field" hidden>
-          <span>合言葉をもう一度</span>
+          <span>同じ数字4桁をもう一度</span>
           <input type="password" id="confirm-passphrase" autocomplete="new-password" maxlength="256" spellcheck="false">
         </label>
+        <details id="change-pin-fields" hidden>
+          <summary>長い合言葉を数字4桁に変更する</summary>
+          <p class="muted">上に今の合言葉、下に新しい数字を入力してください。記録はそのまま残ります。</p>
+          <label class="field"><span>新しい数字4桁</span><input type="password" id="new-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="new-password"></label>
+          <label class="field"><span>新しい数字4桁をもう一度</span><input type="password" id="confirm-new-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="new-password"></label>
+        </details>
         <button type="submit" class="button primary full" id="open-owner">日記を開く</button>
         <p class="message" id="owner-gate-message" role="status"></p>
       </form>
@@ -1089,7 +1095,6 @@ const STORE = "vault";
 const SETTINGS_ID = "settings";
 const SETTINGS_CONTEXT = "hibi-vault-v1:settings";
 const MAX_ACTIVITIES = 16;
-const MIN_PASSPHRASE_LENGTH = 12;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
 
@@ -1295,6 +1300,38 @@ async function persistOwnerState(database, key, oldBox, state, removeIds = []) {
   const box = await seal(key, state, STATE_CONTEXT);
   await changeVault(database, STATE_ID, oldBox, { id: STATE_ID, box }, removeIds);
   return box;
+}
+
+// Re-encrypt settings and the complete owner state in one atomic transaction.
+// Compare both ciphertexts to avoid overwriting an edit from another tab.
+async function replaceOwnerPin(database, settings, loaded, pin) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await vaultKey(pin, salt);
+  const settingsBox = await seal(key, "ready", SETTINGS_CONTEXT);
+  const box = await seal(key, loaded.state, STATE_CONTEXT);
+  await new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    const oldSettings = store.get(SETTINGS_ID);
+    const oldState = store.get(STATE_ID);
+    let pending = 2;
+    let conflict = false;
+    const checked = () => {
+      if (--pending) return;
+      if (oldSettings.result?.box !== settings.box || oldState.result?.box !== loaded.box) {
+        conflict = true;
+        tx.abort();
+        return;
+      }
+      store.put({ id: SETTINGS_ID, salt: encodeBytes(salt), box: settingsBox, credential: "pin4" });
+      store.put({ id: STATE_ID, box });
+    };
+    oldSettings.onsuccess = checked;
+    oldState.onsuccess = checked;
+    tx.oncomplete = resolve;
+    tx.onabort = () => reject(conflict ? new RecordConflict() : tx.error);
+  });
+  return { key, box };
 }
 
 const API = "https://api.github.com";
@@ -2151,6 +2188,7 @@ let ownerKey;
 let ownerState;
 let ownerBox;
 let creatingOwner = false;
+let ownerGateSettings;
 let editDate;
 let loadedDay;
 let working = "";
@@ -2169,14 +2207,24 @@ function visibleDays() {
 function showOwnerGate(settings) {
   creatingOwner = !settings;
   $("gate-title").textContent = creatingOwner ? "自分の日記をつくる" : "日記を開く";
+  const numeric = creatingOwner || settings?.credential === "pin4";
   $("gate-note").textContent = creatingOwner
-    ? "編集画面を開く合言葉を、12文字以上で決めてください。"
-    : "自分用の合言葉で、この端末の日記を開きます。";
+    ? "この端末の日記を開く数字4桁を決めてください。"
+    : numeric ? "数字4桁で、この端末の日記を開きます。" : "今までの合言葉で開けます。下から数字4桁に変更することもできます。";
+  $("owner-secret-label").textContent = numeric ? "数字4桁" : "今までの合言葉";
+  $("change-pin-fields").hidden = creatingOwner || numeric;
   $("confirm-field").hidden = !creatingOwner;
   $("confirm-passphrase").required = creatingOwner;
-  $("passphrase").minLength = creatingOwner ? MIN_PASSPHRASE_LENGTH : 1;
+  for (const id of ["passphrase", "confirm-passphrase"]) {
+    const input = $(id);
+    input.minLength = numeric ? 4 : 1;
+    input.maxLength = numeric ? 4 : 256;
+    input.setAttribute("inputmode", numeric ? "numeric" : "text");
+    if (numeric) input.setAttribute("pattern", "[0-9]{4}");
+    else input.removeAttribute("pattern");
+  }
   $("passphrase").autocomplete = creatingOwner ? "new-password" : "current-password";
-  $("open-owner").textContent = creatingOwner ? "合言葉を設定してはじめる" : "日記を開く";
+  $("open-owner").textContent = creatingOwner ? "この数字ではじめる" : "日記を開く";
   $("owner-gate").hidden = false;
 }
 
@@ -2185,12 +2233,18 @@ async function unlockOwner(event) {
   const submit = $("open-owner");
   if (submit.disabled) return;
   const passphrase = $("passphrase").value;
-  if (creatingOwner && (passphrase.length < MIN_PASSPHRASE_LENGTH || !passphrase.trim())) {
-    status("owner-gate-message", "12文字以上の合言葉を入力してください。", true);
+  if (creatingOwner && !/^[0-9]{4}$/.test(passphrase)) {
+    status("owner-gate-message", "数字4桁を入力してください。", true);
     return;
   }
   if (creatingOwner && $("confirm-passphrase").value !== passphrase) {
-    status("owner-gate-message", "同じ合言葉を2回入力してください。", true);
+    status("owner-gate-message", "同じ数字4桁を2回入力してください。", true);
+    return;
+  }
+  const newPin = !creatingOwner && !$("change-pin-fields").hidden ? $("new-pin").value : "";
+  const confirmPin = !creatingOwner && !$("change-pin-fields").hidden ? $("confirm-new-pin").value : "";
+  if ((newPin || confirmPin) && (!/^[0-9]{4}$/.test(newPin) || newPin !== confirmPin)) {
+    status("owner-gate-message", "新しい数字4桁を、同じ内容で2回入力してください。", true);
     return;
   }
   submit.disabled = true;
@@ -2216,7 +2270,7 @@ async function unlockOwner(event) {
       const salt = crypto.getRandomValues(new Uint8Array(16));
       key = await vaultKey(passphrase, salt);
       const box = await seal(key, "ready", SETTINGS_CONTEXT);
-      settings = { id: SETTINGS_ID, salt: encodeBytes(salt), box };
+      settings = { id: SETTINGS_ID, salt: encodeBytes(salt), box, credential: "pin4" };
       await changeVault(ownerDatabase, SETTINGS_ID, undefined, settings);
     }
 
@@ -2227,6 +2281,13 @@ async function unlockOwner(event) {
       if (!(error instanceof RecordConflict)) throw error;
       loaded = await loadOwnerState(ownerDatabase, key);
     }
+    if (newPin) {
+      if (loaded.skipped) throw new Error("PIN migration requires all records to load");
+      const changed = await replaceOwnerPin(ownerDatabase, settings, loaded, newPin);
+      key = changed.key;
+      loaded.box = changed.box;
+    }
+    ownerGateSettings = newPin ? { credential: "pin4" } : settings;
     ownerKey = key;
     ownerState = loaded.state;
     ownerBox = loaded.box;
@@ -2251,7 +2312,7 @@ async function unlockOwner(event) {
       showOwnerGate(true);
       status("owner-gate-message", "別の画面で設定した合言葉を入力してください。", true);
     } else {
-      status("owner-gate-message", "日記を開けませんでした。ブラウザーの保存設定を確認してください。", true);
+      status("owner-gate-message", "日記を開けませんでした。数字4桁への変更中だった場合は、今までの合言葉で開き直してください。ブラウザーの保存設定も確認してください。", true);
     }
   } finally {
     submit.disabled = false;
@@ -2787,7 +2848,7 @@ function lockOwner() {
   status("save-message");
   status("connection-message");
   status("owner-gate-message");
-  showOwnerGate(true);
+  showOwnerGate(ownerGateSettings);
   $("passphrase").focus();
 }
 
