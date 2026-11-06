@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-PTOoNDaE+OLJENizlWaQNUb/aodhXCwCmLdrXnb+hzc='; style-src 'sha256-sI6bqIeYkWcRTHBKkJQTbZtphEZZJHeRo7lN4b6JUCc='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-c/xdfy1/4xk6N2Ol3Hp4iURjp1xynJfdMbsva+dzw5U='; style-src 'sha256-+bPe52LHxT6G6DuYO811PVrH2xqYok9PYo35yCkgl3Y='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -573,7 +573,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
   .panel, .editor { padding: 17px; }
   .editor-top h2 { font-size: 1.35rem; }
   .sidebar > .panel { padding-inline: 3px; }
-  body:has(#editor-view:not([hidden])) main { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+  body:has(#editor-view:not([hidden]) #day-save-bar:not([hidden])) main { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
   .save-bar {
     position: fixed; z-index: 6; left: 0; right: 0; bottom: 0; margin: 0;
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
@@ -695,6 +695,13 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 }
 .time-row input[type="time"]::-webkit-datetime-edit { padding: 0; }
 .time-arrow svg { width: 18px; height: 18px; }
+
+#mood-save-feedback, #outside-save-feedback { font-size: .8rem; margin-top: 6px; }
+#mood-save-feedback:empty, #outside-save-feedback:empty { display: none; }
+#activity-notice:not(:empty) { display: block; margin-block: 6px; }
+#time-composer > summary { color: var(--green); }
+#quick-preview:empty, #activity-save-message:empty { display: none; }
+#cancel-activity { margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -815,6 +822,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
               <fieldset class="mood-section">
                 <legend>その日の気分</legend>
                 <div class="mood-options" id="mood-options"></div>
+                <p class="muted" id="mood-save-feedback" role="status"></p>
                 <button type="button" class="text-button" id="clear-mood" hidden>選択を外す</button>
               </fieldset>
 
@@ -824,27 +832,28 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                   <label><input type="radio" name="outside" value="out"><span>外に出た</span></label>
                   <label><input type="radio" name="outside" value="home"><span>家で過ごした</span></label>
                 </div>
+                <p class="muted" id="outside-save-feedback" role="status"></p>
                 <button type="button" class="text-button" id="clear-outside" hidden>選択を外す</button>
               </fieldset>
 
               <section class="form-section" aria-labelledby="time-title">
                 <h3 id="time-title">したこと・過ごした時間</h3>
-                <p class="muted manual-save-hint">したことやメモを追加したら、下の「記録を保存」を押してください。</p>
-                <p class="muted" id="time-empty">散歩や買い物など、時刻が分からなくても書けます。</p>
+                <p class="muted" id="time-empty">まだ行動の記録はありません。</p>
                 <div class="activity-list" id="activity-list"></div>
                 <div class="activity-undo"><span id="activity-notice" role="status"></span><button type="button" class="text-button" id="undo-activity" hidden>元に戻す</button></div>
-                <button class="button secondary icon-text" type="button" id="add-activity">
-                  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>したことを自由に書く</span>
-                </button>
                 <details class="quick-time" id="time-composer">
-                  <summary>よく使う行動から選ぶ</summary>
+                  <summary id="add-activity">＋ したことを追加</summary>
+                  <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
+                  <p class="muted">よく使う候補（もう一度押すと解除）</p>
                   <div class="time-presets" id="time-presets" aria-label="行動を選ぶ">
-                    <button type="button" class="button secondary" data-action="仕事" data-start="09:00" data-end="18:00" aria-pressed="true">仕事</button>
+                    <button type="button" class="button secondary" data-action="仕事" data-start="09:00" data-end="18:00" aria-pressed="false">仕事</button>
                     <button type="button" class="button secondary" data-action="昼休み" data-start="12:00" data-end="13:00" aria-pressed="false">昼休み</button>
                     <button type="button" class="button secondary" data-action="睡眠" data-start="23:00" data-end="07:00" aria-pressed="false">睡眠</button>
                     <button type="button" class="button secondary" data-action="外出" data-start="10:00" data-end="11:00" aria-pressed="false">外出</button>
                   </div>
                   <p class="quick-preview" id="quick-preview" role="status"></p>
+                  <details id="quick-details" class="time-band"><summary>時間・場所を入れる（任意）</summary>
+                  <label class="field"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
                   <div class="time-row">
                     <label class="field"><span>開始</span><input type="time" id="quick-start" value="09:00" step="60"></label>
                     <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
@@ -860,7 +869,10 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                   </div>
 
                   </details>
-                  <button class="button secondary full" type="button" id="add-selected-time">この内容を記録に追加</button>
+                  </details>
+                  <button class="button primary full" type="button" id="add-selected-time">この行動を保存</button>
+                  <button class="text-button" type="button" id="cancel-activity">キャンセル</button>
+                  <p class="message" id="activity-save-message" role="status"></p>
                 </details>
 
 
@@ -882,7 +894,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                 <button type="button" class="text-button danger" id="delete-entry" hidden>この日を削除</button>
               </details>
 
-              <div class="save-bar">
+              <div class="save-bar" id="day-save-bar" hidden>
                 <button type="submit" class="button primary icon-text" id="save-entry">
                   <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span id="save-label">記録を保存</span>
                 </button>
@@ -2072,9 +2084,14 @@ function bindViews() {
 }
 
 let refreshTimePresets = () => {};
+let activityDraftDirty = () => false;
 
 function bindTimePicker() {
-  let action = "仕事";
+  let selected = null;
+  const times = new Map();
+  const actionInput = $("quick-action");
+  const placeInput = $("quick-place");
+  const presets = [...$("time-presets").querySelectorAll("button")];
   let drag = null;
   const startInput = $("quick-start");
   const endInput = $("quick-end");
@@ -2091,52 +2108,75 @@ function bindTimePicker() {
       const offset = index * 720;
       const rectangles = ranges.filter(([left, right]) => right > offset && left < offset + 720)
         .map(([left, right]) => svgNode("rect", {
-          class: "time-selection", color: activityColor(action), x: Math.max(left, offset) - offset, y: 2,
+          class: "time-selection", color: activityColor(actionInput.value.trim()), x: Math.max(left, offset) - offset, y: 2,
           width: Math.min(right, offset + 720) - Math.max(left, offset), height: 40, rx: 6
         }));
       $(id).replaceChildren(...rectangles);
     }
     const duration = (finish - start + 1440) % 1440;
     const durationLabel = (Math.floor(duration / 60) ? Math.floor(duration / 60) + "時間" : "") + (duration % 60 ? duration % 60 + "分" : "");
-    $("quick-preview").textContent = valid
-      ? action + "　" + timeRange({ start: startInput.value, end: endInput.value }) + "（" + durationLabel + "）"
-      : "開始と終了に、異なる時刻を選んでください。";
-    $("add-selected-time").disabled = !valid;
+    const action = actionInput.value.trim();
+    $("quick-preview").textContent = action
+      ? "入力中 · " + action + (valid ? "　" + timeRange({ start: startInput.value, end: endInput.value }) + "（" + durationLabel + "）" : "")
+      : "";
+    $("add-selected-time").disabled = !action || Boolean(startInput.value && startInput.value === endInput.value);
+    for (const preset of presets) preset.setAttribute("aria-pressed", String(preset === selected));
+  }
+
+  activityDraftDirty = () => Boolean(actionInput.value.trim() || placeInput.value.trim() || startInput.value || endInput.value);
+
+  function resetComposer() {
+    selected = null;
+    times.clear();
+    actionInput.value = placeInput.value = startInput.value = endInput.value = "";
+    $("quick-details").open = false;
+    status("activity-save-message");
+    paint();
   }
 
   refreshTimePresets = () => {
-    const previous = datesNewest(ownerState?.days ?? {}).filter((date) => date <= editDate);
-    for (const preset of $("time-presets").querySelectorAll("button")) {
-      const saved = previous.flatMap((date) => ownerState.days[date].activities)
-        .find((item) => item.action === preset.dataset.action && item.start && item.end && item.start !== item.end);
-      if (!preset.dataset.defaultStart) {
-        preset.dataset.defaultStart = preset.dataset.start;
-        preset.dataset.defaultEnd = preset.dataset.end;
-      }
+    resetComposer();
+    const previous = datesNewest(ownerState?.days ?? {}).filter((date) => date <= editDate)
+      .flatMap((date) => ownerState.days[date].activities);
+    for (const preset of presets) {
+      preset.dataset.defaultStart ||= preset.dataset.start;
+      preset.dataset.defaultEnd ||= preset.dataset.end;
+      const saved = previous.find((item) => item.action === preset.dataset.action && item.start && item.end && item.start !== item.end);
       preset.dataset.start = saved?.start ?? preset.dataset.defaultStart;
       preset.dataset.end = saved?.end ?? preset.dataset.defaultEnd;
-      preset.dataset.reused = String(Boolean(saved));
-      if (preset.dataset.action === action) {
-        startInput.value = preset.dataset.start;
-        endInput.value = preset.dataset.end;
-        $("preset-hint").textContent = saved ? "前回の時間です。帯をなぞるか、時刻をタップして変更できます。" : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
-      }
     }
-    paint();
   };
 
-  for (const preset of $("time-presets").querySelectorAll("button")) {
+  for (const preset of presets) {
     preset.addEventListener("click", () => {
-      action = preset.dataset.action;
-      $("preset-hint").textContent = preset.dataset.reused === "true" ? "前回の時間です。帯をなぞるか、時刻をタップして変更できます。" : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
-      startInput.value = preset.dataset.start;
-      endInput.value = preset.dataset.end;
-      for (const item of $("time-presets").querySelectorAll("button")) {
-        item.setAttribute("aria-pressed", String(item === preset));
+      if (selected) times.set(selected, [startInput.value, endInput.value]);
+      if (selected === preset) {
+        selected = null;
+        actionInput.value = startInput.value = endInput.value = "";
+      } else {
+        selected = preset;
+        actionInput.value = preset.dataset.action;
+        [startInput.value, endInput.value] = times.get(preset) ?? [preset.dataset.start, preset.dataset.end];
       }
+      status("activity-save-message");
       paint();
     });
   }
+
+  actionInput.addEventListener("input", () => {
+    if (selected && actionInput.value.trim() !== selected.dataset.action) selected = null;
+    paint();
+  });
+  for (const input of [actionInput, placeInput, startInput, endInput]) {
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.isComposing) event.preventDefault();
+    });
+  }
+  $("cancel-activity").addEventListener("click", () => {
+    resetComposer();
+    $("time-composer").open = false;
+    $("add-activity").focus();
+  });
 
   function position(event) {
     const rectangles = tracks.map((track) => track.getBoundingClientRect());
@@ -2180,29 +2220,15 @@ function bindTimePicker() {
   surface.addEventListener("lostpointercapture", () => { drag = null; });
   startInput.addEventListener("input", paint);
   endInput.addEventListener("input", paint);
-  $("add-selected-time").addEventListener("click", () => {
-    if (working === "save") return;
-    const existing = [...$("activity-list").children].find((row) =>
-      row.querySelector(".start-time").value === startInput.value
-      && row.querySelector(".end-time").value === endInput.value
-      && row.querySelector(".action").value === action);
-    if (existing) {
-      existing.querySelector("summary").focus();
-      status("save-message", "同じ時間帯が追加されています。");
-      return;
+  $("add-selected-time").addEventListener("click", async () => {
+    const activity = { start: startInput.value, end: endInput.value, place: placeInput.value.trim(), action: actionInput.value.trim() };
+    if (!activity.action || !validActivity(activity) || (activity.start && activity.start === activity.end)) return;
+    const saved = await saveNewActivity(activity);
+    if (saved) {
+      $("time-composer").open = false;
+      refreshTimePresets();
+      $("add-activity").focus();
     }
-    if ($("activity-list").children.length >= MAX_ACTIVITIES) {
-      status("save-message", "時間帯は1日16件まで追加できます。", true);
-      return;
-    }
-    addActivity({ start: startInput.value, end: endInput.value, place: "", action });
-    if (action === "外出") {
-      for (const radio of $("outside-options").querySelectorAll("input")) radio.checked = radio.value === "out";
-      queueQuickSave("outside", "out");
-    }
-    renumberActivities();
-    refreshEditorControls();
-    status("save-message", action + "を追加しました。「記録を保存」で保存できます。");
   });
   paint();
 }
@@ -2371,6 +2397,7 @@ function queueQuickSave(field, value) {
   if (!pendingQuickSave || pendingQuickSave.date !== editDate) pendingQuickSave = { date: editDate, patch: {} };
   pendingQuickSave.patch[field] = value;
   quickSaveError = "";
+  $(field + "-save-feedback").textContent = "保存中…";
   clearTimeout(quickSaveTimer);
   quickSaveTimer = setTimeout(() => void flushQuickSave(), 300);
   refreshEditorControls();
@@ -2384,6 +2411,7 @@ async function flushQuickSave() {
   const current = ownerState.days[editDate];
   if (!dayEquals(loadedDay, current)) {
     quickSaveError = "選択は未保存です";
+    for (const field of Object.keys(request.patch)) $(field + "-save-feedback").textContent = "未保存です。";
     status("save-message", "別の端末で更新されています。選択は未保存です。内容を確認して保存してください。", true);
     refreshEditorControls();
     return false;
@@ -2401,6 +2429,9 @@ async function flushQuickSave() {
       ownerBox = box;
       loadedDay = record;
       quickSaveError = "";
+      for (const field of Object.keys(request.patch)) {
+        if (!Object.hasOwn(pendingQuickSave?.patch ?? {}, field)) $(field + "-save-feedback").textContent = "端末に保存しました。";
+      }
       renderRecent();
       if (displayedPanel === "month") renderMonth();
       status("save-message", editorDirty() ? "選択を保存しました。入力中の時間・メモはまだ保存していません。" : "選択を保存しました。");
@@ -2409,6 +2440,7 @@ async function flushQuickSave() {
     return Boolean(done);
   } catch (error) {
     quickSaveError = "保存できませんでした";
+    for (const field of Object.keys(request.patch)) $(field + "-save-feedback").textContent = "未保存です。";
     refreshEditorControls();
     status("save-message", ownerError(error) + " 選択は残っています。保存ボタンから再試行できます。", true);
     return false;
@@ -2457,7 +2489,6 @@ function renumberActivities() {
     renderActivitySummary(row);
   }
   $("time-empty").hidden = rows.length > 0;
-  $("add-activity").disabled = rows.length >= MAX_ACTIVITIES;
   $("undo-activity").disabled = rows.length >= MAX_ACTIVITIES;
 }
 
@@ -2486,6 +2517,10 @@ function addActivity(activity = {}, focus = false) {
 
 function refreshEditorControls() {
   const dirty = Boolean(ownerKey && editorDirty());
+  const draft = editorDraft();
+  const hasOtherDraft = draft.note !== (loadedDay?.note ?? "")
+    || JSON.stringify(draft.activities) !== JSON.stringify(loadedDay?.activities ?? []);
+  $("day-save-bar").hidden = !dirty || Boolean(pendingQuickSave && !hasOtherDraft && !quickSaveError);
   $("save-state").textContent = working === "save" ? "保存中…" : quickSaveError ? quickSaveError : pendingQuickSave ? "選択を保存しています…" : dirty ? "未保存の変更"
     : !loadedDay ? "残せる項目だけで大丈夫です"
     : ownerState?.cloud && !hasPending(ownerState) ? "共有済み" : "端末に保存済み";
@@ -2506,6 +2541,7 @@ function fillEditor(date) {
   cancelQuickSave();
   quickSaveError = "";
   editDate = date;
+  $("mood-save-feedback").textContent = $("outside-save-feedback").textContent = "";
   removedActivity = undefined;
   $("undo-activity").hidden = true;
   $("activity-notice").textContent = "";
@@ -2530,6 +2566,11 @@ function fillEditor(date) {
 function chooseEditorDate(date) {
   if (!validDate(date) || working === "save") return false;
   if (date === editDate) return true;
+  if (activityDraftDirty()) {
+    if (!window.confirm("入力中の行動を取り消して、日付を移動しますか？")) return false;
+    refreshTimePresets();
+    $("time-composer").open = false;
+  }
   if (editorDirty()) {
     pendingEditorDate = date;
     $("leave-note").textContent = displayDay(editDate) + "の変更が未保存です。" + displayDay(date) + "へ移動します。";
@@ -2598,7 +2639,7 @@ function resetShareSecrets() {
 async function persistState(next, replaceDraft = false) {
   if (next === ownerState) return;
   const box = await persistOwnerState(ownerDatabase, ownerKey, ownerBox, next);
-  const preserve = !replaceDraft && editorDirty();
+  const preserve = !replaceDraft && (editorDirty() || activityDraftDirty());
   ownerState = next;
   ownerBox = box;
   if (!preserve && (replaceDraft || !dayEquals(loadedDay, next.days[editDate]))) fillEditor(editDate);
@@ -2643,13 +2684,64 @@ function ownerError(error) {
     : "端末に保存できませんでした。ブラウザーの保存設定を確認してください。";
 }
 
+async function saveNewActivity(activity) {
+  if (!ownerKey || working) {
+    status("activity-save-message", "処理中です。終わったらもう一度押してください。");
+    return false;
+  }
+  const current = ownerState.days[editDate];
+  if (!dayEquals(loadedDay, current)) {
+    status("activity-save-message", "別の端末で更新されました。入力を控え、画面を開き直してください。", true);
+    return false;
+  }
+  const day = dayWithoutRevision(current) ?? { date: editDate, mood: null, outside: null, note: "", activities: [] };
+  if (day.activities.length >= MAX_ACTIVITIES || $("activity-list").children.length >= MAX_ACTIVITIES) {
+    status("activity-save-message", "行動は1日16件まで保存できます。", true);
+    return false;
+  }
+  if (day.activities.some((item) => ["action", "place", "start", "end"].every((key) => item[key] === activity[key]))) {
+    status("activity-save-message", "同じ内容はすでに保存されています。");
+    return false;
+  }
+  const markOutside = activity.action === "外出" && !Object.hasOwn(pendingQuickSave?.patch ?? {}, "outside")
+    && editorDraft().outside === day.outside;
+  const record = { ...day, outside: markOutside ? "out" : day.outside, activities: [...day.activities, activity], rev: crypto.randomUUID() };
+  try {
+    const done = await runOwnerOperation("save", async () => {
+      const next = { ...ownerState, days: { ...ownerState.days, [record.date]: record } };
+      const box = await persistOwnerState(ownerDatabase, ownerKey, ownerBox, next);
+      ownerState = next;
+      ownerBox = box;
+      loadedDay = record;
+      addActivity(activity);
+      if (markOutside) {
+        for (const radio of $("outside-options").querySelectorAll("input")) radio.checked = radio.value === "out";
+      }
+      renumberActivities();
+      renderRecent();
+      if (displayedPanel === "month") renderMonth();
+      $("activity-notice").textContent = activity.action + "を端末に保存しました。";
+    });
+    if (done && ownerState.cloud) void synchronize();
+    return Boolean(done);
+  } catch (error) {
+    status("activity-save-message", ownerError(error) + " 入力内容は残っています。", true);
+    return false;
+  }
+}
+
 async function saveEntry(event, syncAfter = true) {
   event.preventDefault();
   if (!ownerKey || working) return false;
+  if (activityDraftDirty()) {
+    status("activity-save-message", "入力中の行動を先に保存するか、キャンセルしてください。", true);
+    return false;
+  }
   if (!editorDirty()) return true;
   const draft = editorDraft();
-  if (!validDay(draft)) {
-    status("save-message", "気分、外出、メモ、過ごした時間のどれかを記録してください。", true);
+  const empty = !draft.mood && !draft.outside && !draft.note && !draft.activities.length;
+  if (!validDay(draft) && !(empty && loadedDay)) {
+    status("save-message", "記録の内容を確認してください。", true);
     return;
   }
   const current = ownerState.days[draft.date];
@@ -2657,7 +2749,9 @@ async function saveEntry(event, syncAfter = true) {
   const record = { ...draft, rev: crypto.randomUUID() };
   try {
     const done = await runOwnerOperation("save", async () => {
-      const days = { ...ownerState.days, [draft.date]: record };
+      const days = { ...ownerState.days };
+      if (empty) delete days[draft.date];
+      else days[draft.date] = record;
       await persistState({ ...ownerState, days }, true);
       status("save-message", ownerState.cloud ? "端末に保存しました。GitHubと同期します。" : "この日の記録を保存しました。");
     });
@@ -2844,7 +2938,7 @@ async function copyField(id, label) {
 }
 
 function lockOwner() {
-  if (working || (editorDirty() && !window.confirm("保存前の入力があります。日記を閉じますか？"))) return;
+  if (working || ((editorDirty() || activityDraftDirty()) && !window.confirm("保存前の入力があります。日記を閉じますか？"))) return;
   ownerKey = undefined;
   ownerState = undefined;
   ownerBox = undefined;
@@ -2942,10 +3036,6 @@ async function initOwner() {
     $("go-today").addEventListener("click", () => {
       if (chooseEditorDate(isoToday())) $("editor-title").focus();
     });
-    $("add-activity").addEventListener("click", () => {
-      addActivity({}, true);
-      renumberActivities();
-    });
     $("clear-mood").addEventListener("click", () => {
       $("mood-options").querySelector("input:checked").checked = false;
       queueQuickSave("mood", null);
@@ -2988,7 +3078,7 @@ async function initOwner() {
       if (ownerState?.cloud && hasPending(ownerState)) void synchronize({ quiet: true });
     });
     window.addEventListener("beforeunload", (event) => {
-      if (ownerKey && editorDirty()) {
+      if (ownerKey && (editorDirty() || activityDraftDirty())) {
         event.preventDefault();
         event.returnValue = "";
       }
