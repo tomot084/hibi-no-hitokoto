@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-PTOoNDaE+OLJENizlWaQNUb/aodhXCwCmLdrXnb+hzc='; style-src 'sha256-utWMS2GHLk2GTDgBtKx8tNPtStsQJBdq6DGFFqsHQGk='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-PTOoNDaE+OLJENizlWaQNUb/aodhXCwCmLdrXnb+hzc='; style-src 'sha256-sI6bqIeYkWcRTHBKkJQTbZtphEZZJHeRo7lN4b6JUCc='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -632,7 +632,8 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
   min-width: 0;
   width: 100%;
   block-size: 46px;
-  padding-block: 0;
+  padding-block: 10px;
+  line-height: 24px;
   font-variant-numeric: tabular-nums;
 }
 .quick-preview { min-height: 2em; font-size: .87rem; overflow-wrap: anywhere; }
@@ -685,6 +686,15 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .review-numbers summary, .week-numbers summary { min-height: 44px; padding-block: 10px; font-size: .78rem; color: var(--muted); }
 .manual-save-hint { font-size: .78rem; margin-block: 5px 8px; }
 #save-message:not(:empty) { padding: 10px 0; }
+
+.time-row input[type="time"]::-webkit-date-and-time-value {
+  margin: 0;
+  min-height: 24px;
+  line-height: 24px;
+  text-align: center;
+}
+.time-row input[type="time"]::-webkit-datetime-edit { padding: 0; }
+.time-arrow svg { width: 18px; height: 18px; }
 </style>
 </head>
 <body>
@@ -837,7 +847,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                   <p class="quick-preview" id="quick-preview" role="status"></p>
                   <div class="time-row">
                     <label class="field"><span>開始</span><input type="time" id="quick-start" value="09:00" step="60"></label>
-                    <span class="time-arrow" aria-hidden="true">→</span>
+                    <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
                     <label class="field"><span>終了</span><input type="time" id="quick-end" value="18:00" step="60"></label>
                   </div>
                   <details class="time-band"><summary>帯をなぞって時間を選ぶ</summary>
@@ -1090,7 +1100,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
       <div class="activity-editor">
         <div class="time-row">
           <label class="field"><span>開始</span><input type="time" class="start-time" step="60"></label>
-          <span class="time-arrow" aria-hidden="true">→</span>
+          <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
           <label class="field"><span>終了</span><input type="time" class="end-time" step="60"></label>
         </div>
         <div class="activity-info">
