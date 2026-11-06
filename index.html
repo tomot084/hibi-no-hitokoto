@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-jlPPPjsCnQVh2FCNo+ESgBFzeLl1cVvtv9mrQMNwL0Y='; style-src 'sha256-H8yaePBesne+nj6VgWi7fxo+QnhOHa4PKt6jdOw8tGo='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-yyNEKzasdF72r/WaOpJ80LSRp0l2KubdtLFdtdcln+o='; style-src 'sha256-H8yaePBesne+nj6VgWi7fxo+QnhOHa4PKt6jdOw8tGo='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -1004,24 +1004,26 @@ input[type="time"] { min-width: 0; width: 100%; font-variant-numeric: tabular-nu
           <span class="tile-icon gold" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 13a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.6 1.6m2.6 4.4a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.6-1.6"/></svg></span>
           <p class="overline">全日分・閲覧専用</p>
           <h2 id="share-title">専務に共有</h2>
-          <p class="muted section-intro" id="share-intro">GitHubへの初回同期が完了すると、固定の閲覧URLとコードを渡せます。</p>
+          <p class="muted section-intro" id="share-intro">GitHubへの初回同期が完了すると、入力不要の閲覧URLを渡せます。</p>
           <div id="share-fields" hidden>
             <div class="copy-block">
-              <label for="share-link">固定の閲覧URL</label>
+              <label for="share-link">専務に送る閲覧URL</label>
               <div class="copy-row">
                 <input type="text" id="share-link" readonly spellcheck="false">
                 <button type="button" class="button secondary" id="copy-link" aria-label="閲覧URLをコピー">コピー</button>
               </div>
             </div>
-            <div class="copy-block">
+            <details class="copy-block">
+              <summary>以前のURL用の閲覧コード</summary>
               <label for="share-code">閲覧コード</label>
               <div class="copy-row">
                 <input type="password" id="share-code" readonly autocomplete="off" spellcheck="false">
                 <button type="button" class="button secondary" id="copy-code" aria-label="閲覧コードをコピー">コピー</button>
               </div>
               <button type="button" class="text-button" id="show-code" aria-pressed="false">コードを表示</button>
-            </div>
-            <p class="muted">URLとコードを別々に一度ずつ渡します。次回からは、同じURLで最新の記録を開けます。</p>
+            </details>
+            <p class="muted">このURLをLINEなどで一度送れば、スマホでもPCでも入力せずに開けます。同じURLに、同期した最新の記録が表示されます。</p>
+            <p class="muted">URLを知っている人は記録を閲覧できます。閲覧してほしい相手にだけ送ってください。</p>
             <p class="muted history-note">GitHubの履歴には、暗号化した過去の版も残ります。</p>
             <a class="button quiet icon-text" id="reader-preview" target="_blank" rel="noopener noreferrer">
               <span>閲覧画面を開く</span><span aria-hidden="true">↗</span>
@@ -2457,12 +2459,13 @@ function chooseEditorDate(date) {
   return true;
 }
 
-function readerUrl(repo) {
+function readerUrl(repo, code) {
   const url = new URL(location.href);
   url.search = "";
   url.hash = "";
   url.searchParams.set("view", "1");
   url.searchParams.set("repo", repo);
+  if (validCode(code)) url.hash = "key=" + code;
   return url.href;
 }
 
@@ -2477,13 +2480,13 @@ function renderOwnerConnection() {
   $("last-synced").textContent = shareReady
     ? "最終同期 " + TIME_FORMAT.format(new Date(cloud.syncedAt))
     : "初回同期を待っています。";
-  const url = shareReady ? readerUrl(cloud.repo) : "";
+  const url = shareReady ? readerUrl(cloud.repo, cloud.code) : "";
   $("share-link").value = url;
   $("share-code").value = shareReady ? cloud.code : "";
   if (url) $("reader-preview").href = url;
   else $("reader-preview").removeAttribute("href");
   $("share-intro").textContent = !shareReady
-    ? "GitHubへの初回同期が完了すると、固定の閲覧URLとコードを渡せます。"
+    ? "GitHubへの初回同期が完了すると、入力不要の閲覧URLを渡せます。"
     : pending
       ? "全日分を共有します。端末の変更は、次の同期で閲覧画面に反映されます。"
       : "全日分の記録を、同じURLで読み返せます。";
@@ -3099,6 +3102,21 @@ async function initReader() {
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && Date.now() - lastReaderCheck >= 300000) void refreshReader();
   });
+  // The fragment stays out of the HTTP request. Keep it in the URL so
+  // bookmarks and links opened on a different device remain usable.
+  const linkCode = sharedView ? new URLSearchParams(location.hash.slice(1)).get("key") : null;
+  if (linkCode !== null) {
+    systemStatus("");
+    if (!validCode(linkCode)) {
+      $("reader-gate").hidden = false;
+      status("reader-gate-message", "閲覧URLが途中で切れている可能性があります。届いたURL全体を開き直してください。", true);
+      return;
+    }
+    $("reader-code").value = linkCode;
+    await unlockReader({ preventDefault() {} });
+    if (!readerSnapshot) $("reader-gate").hidden = false;
+    return;
+  }
   if (!legacySnapshot) {
     try {
       readerDatabase = await openVault();
