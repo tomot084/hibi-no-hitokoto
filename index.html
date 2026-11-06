@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-c/xdfy1/4xk6N2Ol3Hp4iURjp1xynJfdMbsva+dzw5U='; style-src 'sha256-+bPe52LHxT6G6DuYO811PVrH2xqYok9PYo35yCkgl3Y='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-poWzp3+Qka/eJqyhyIpG+/r7ZDy4+485nco1+7AfB5c='; style-src 'sha256-GD7HmJcBDMGNK6blGXU/lLQFmJf8cGa8Gqk9HFmLG0A='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -702,6 +702,46 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 #time-composer > summary { color: var(--green); }
 #quick-preview:empty, #activity-save-message:empty { display: none; }
 #cancel-activity { margin-top: 4px; }
+
+@media (min-width: 761px) {
+  html { scroll-padding-top: 80px; }
+  .frame { width: min(calc(100% - 48px), 1200px); }
+  .workspace { gap: clamp(16px, 2.2vw, 30px); }
+  #editor-view { grid-template-columns: minmax(0, 1.75fr) minmax(235px, 1fr); }
+  #editor-view .sidebar > .panel {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  #editor-view .entry-list button { padding-inline: 8px; }
+  #reader-view:has(.reader-overview:not([hidden])) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    grid-template-areas: "overview detail" "index detail";
+    grid-template-rows: auto 1fr;
+  }
+  #reader-view:has(.reader-overview:not([hidden])) .reader-overview { grid-area: overview; }
+  #reader-view:has(.reader-overview:not([hidden])) #reader-detail { grid-area: detail; }
+  #reader-view:has(.reader-overview:not([hidden])) .journal-index { grid-area: index; }
+  #reader-detail { min-width: 0; }
+  .day-note { max-inline-size: 42em; line-height: 1.8; overflow-wrap: anywhere; }
+  .reader-overview .recent-days { gap: 4px; }
+  .reader-overview .recent-day { min-width: 0; }
+  .entry-list button, .life-entry, .recent-day { scroll-margin-block: 12px; }
+  .mood-choice:has(input:focus-visible), .outside-options label:has(input:focus-visible) {
+    outline: 3px solid var(--green);
+    outline-offset: 3px;
+  }
+  #editor-view .save-bar:not([hidden]) {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    padding-block: 10px;
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+  }
+  html:has(#editor-view:not([hidden]) #day-save-bar:not([hidden])) { scroll-padding-bottom: 85px; }
+}
 </style>
 </head>
 <body>
@@ -2169,7 +2209,10 @@ function bindTimePicker() {
   });
   for (const input of [actionInput, placeInput, startInput, endInput]) {
     input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.isComposing) event.preventDefault();
+      if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return;
+      event.preventDefault();
+      // The action field can finish a short entry without submitting the day form.
+      if (input === actionInput && !event.repeat) $("add-selected-time").click();
     });
   }
   $("cancel-activity").addEventListener("click", () => {
