@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-+CR+5t0yFRWjOD3C97ooduJk9MCIv9RrlJ5w0DWZWnY='; style-src 'sha256-H8yaePBesne+nj6VgWi7fxo+QnhOHa4PKt6jdOw8tGo='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-PTOoNDaE+OLJENizlWaQNUb/aodhXCwCmLdrXnb+hzc='; style-src 'sha256-H8yaePBesne+nj6VgWi7fxo+QnhOHa4PKt6jdOw8tGo='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -789,7 +789,7 @@ input[type="time"] { min-width: 0; width: 100%; font-variant-numeric: tabular-nu
           </div>
           <form id="editor-form">
             <fieldset id="editor-fields">
-              <p class="checkin-hint">気分・外出はタップで保存します。共有設定済みなら専務にも反映されます。</p>
+              <p class="checkin-hint">気分・外出はタップで保存します。共有設定済みなら閲覧画面にも反映されます。</p>
               <fieldset class="mood-section">
                 <legend>その日の気分</legend>
                 <div class="mood-options" id="mood-options"></div>
@@ -880,7 +880,7 @@ input[type="time"] { min-width: 0; width: 100%; font-variant-numeric: tabular-nu
           </section>
           <details class="panel compact sync-details">
             <summary id="editor-sync-title">保存と共有</summary>
-            <p class="muted" id="editor-sync-note">GitHubをつなぐと、全日分を専務と共有できます。</p>
+            <p class="muted" id="editor-sync-note">GitHubをつなぐと、全日分を共有できます。</p>
             <button class="button secondary" type="button" id="open-share-settings">共有設定を開く</button>
           </details>
         </aside>
@@ -1009,11 +1009,11 @@ input[type="time"] { min-width: 0; width: 100%; font-variant-numeric: tabular-nu
         <section class="panel share-card" aria-labelledby="share-title">
           <span class="tile-icon gold" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 13a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.6 1.6m2.6 4.4a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.6-1.6"/></svg></span>
           <p class="overline">全日分・閲覧専用</p>
-          <h2 id="share-title">専務に共有</h2>
+          <h2 id="share-title">共有</h2>
           <p class="muted section-intro" id="share-intro">GitHubへの初回同期が完了すると、入力不要の閲覧URLを渡せます。</p>
           <div id="share-fields" hidden>
             <div class="copy-block">
-              <label for="share-link">専務に送る閲覧URL</label>
+              <label for="share-link">閲覧URL</label>
               <div class="copy-row">
                 <input type="text" id="share-link" readonly spellcheck="false">
                 <button type="button" class="button secondary" id="copy-link" aria-label="閲覧URLをコピー">コピー</button>
@@ -1503,7 +1503,7 @@ async function github(path, { token, method = "GET", body } = {}) {
 async function verifyRepo(repo, token) {
   const details = await github(repoPath(repo), { token });
   if (details.private !== false || (details.visibility && details.visibility !== "public")) {
-    throw new Error("専務が閲覧できるよう、公開の保存用リポジトリを選んでください。");
+    throw new Error("共有相手が閲覧できるよう、公開の保存用リポジトリを選んでください。");
   }
   if (details.archived || details.disabled) throw new Error("書き込み可能なリポジトリを選んでください。");
   if (details.full_name?.toLowerCase() !== repo) throw new Error("リポジトリ名を確認してください。");
@@ -2553,8 +2553,8 @@ function renderOwnerConnection() {
       : "全日分の記録を、同じURLで読み返せます。";
   $("editor-sync-title").textContent = cloud ? "GitHubとつながっています" : "この端末の日記";
   $("editor-sync-note").textContent = cloud
-    ? pending ? "端末の変更は、同期すると専務にも表示されます。" : "同期した全日分を、専務が閲覧できます。"
-    : "GitHubをつなぐと、全日分を専務と共有できます。";
+    ? pending ? "端末の変更は、同期すると閲覧画面にも表示されます。" : "同期した全日分を、共有相手が閲覧できます。"
+    : "GitHubをつなぐと、全日分を共有できます。";
   $("connect").disabled = Boolean(working) || location.protocol !== "https:";
   for (const id of ["sync-now", "update-token", "disconnect", "lock"]) $(id).disabled = Boolean(working);
   refreshEditorControls();
