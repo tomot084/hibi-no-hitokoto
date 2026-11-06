@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-PTOoNDaE+OLJENizlWaQNUb/aodhXCwCmLdrXnb+hzc='; style-src 'sha256-H8yaePBesne+nj6VgWi7fxo+QnhOHa4PKt6jdOw8tGo='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-PTOoNDaE+OLJENizlWaQNUb/aodhXCwCmLdrXnb+hzc='; style-src 'sha256-utWMS2GHLk2GTDgBtKx8tNPtStsQJBdq6DGFFqsHQGk='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -262,7 +262,7 @@ legend { padding: 0; }
 .activity-title { font-variant-numeric: tabular-nums; }
 .time-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; }
 .time-row .field, .activity-info .field { margin: 0; }
-.time-arrow { color: var(--green); padding-bottom: 9px; }
+.time-arrow { color: var(--green); display: grid; place-items: center; block-size: 46px; }
 .activity-info { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
 .save-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 11px; margin-top: 18px; }
 .save-bar .primary { flex: 1 1 160px; }
@@ -616,13 +616,25 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 #editor-fields > .mood-section { border-top: 0; padding-top: 0; }
 #editor-fields > .form-section { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
 .quick-time .time-row { margin: 12px 0; }
-.quick-time #add-activity { margin-top: 10px; width: 100%; }
+#add-activity { width: 100%; }
+.time-band { margin-block: 8px 12px; }
 .day-navigation .button, .text-button, .quick-time > summary,
 .day-tools > summary, .sync-details > summary { min-height: 44px; }
 .quick-time > summary { display: list-item; padding-block: 10px; }
 .time-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; overflow: visible; }
 .time-presets .button { min-width: 0; min-height: 44px; padding-inline: 4px; }
-input[type="time"] { min-width: 0; width: 100%; font-variant-numeric: tabular-nums; }
+.time-row .field { min-width: 0; }
+.time-row input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  block-size: 46px;
+  padding-block: 0;
+  font-variant-numeric: tabular-nums;
+}
 .quick-preview { min-height: 2em; font-size: .87rem; overflow-wrap: anywhere; }
 @media (max-width: 760px) {
   html { scroll-padding-top: 120px; scroll-padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
@@ -789,7 +801,7 @@ input[type="time"] { min-width: 0; width: 100%; font-variant-numeric: tabular-nu
           </div>
           <form id="editor-form">
             <fieldset id="editor-fields">
-              <p class="checkin-hint">気分・外出はタップで保存します。共有設定済みなら閲覧画面にも反映されます。</p>
+              <p class="checkin-hint">気分や外出は、当てはまるものをタップするだけで保存されます。どちらか一つだけでも大丈夫です。</p>
               <fieldset class="mood-section">
                 <legend>その日の気分</legend>
                 <div class="mood-options" id="mood-options"></div>
@@ -806,19 +818,29 @@ input[type="time"] { min-width: 0; width: 100%; font-variant-numeric: tabular-nu
               </fieldset>
 
               <section class="form-section" aria-labelledby="time-title">
-                <h3 id="time-title">過ごした時間</h3>
-                <p class="muted manual-save-hint">時間・場所・メモは「記録を保存」で確定します。</p>
-                <p class="muted" id="time-empty">仕事・休憩・睡眠など、覚えておきたい時間を。</p>
+                <h3 id="time-title">したこと・過ごした時間</h3>
+                <p class="muted manual-save-hint">したことやメモを追加したら、下の「記録を保存」を押してください。</p>
+                <p class="muted" id="time-empty">散歩や買い物など、時刻が分からなくても書けます。</p>
                 <div class="activity-list" id="activity-list"></div>
                 <div class="activity-undo"><span id="activity-notice" role="status"></span><button type="button" class="text-button" id="undo-activity" hidden>元に戻す</button></div>
+                <button class="button secondary icon-text" type="button" id="add-activity">
+                  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>したことを自由に書く</span>
+                </button>
                 <details class="quick-time" id="time-composer">
-                  <summary>時間を追加</summary>
+                  <summary>よく使う行動から選ぶ</summary>
                   <div class="time-presets" id="time-presets" aria-label="行動を選ぶ">
                     <button type="button" class="button secondary" data-action="仕事" data-start="09:00" data-end="18:00" aria-pressed="true">仕事</button>
                     <button type="button" class="button secondary" data-action="昼休み" data-start="12:00" data-end="13:00" aria-pressed="false">昼休み</button>
                     <button type="button" class="button secondary" data-action="睡眠" data-start="23:00" data-end="07:00" aria-pressed="false">睡眠</button>
                     <button type="button" class="button secondary" data-action="外出" data-start="10:00" data-end="11:00" aria-pressed="false">外出</button>
                   </div>
+                  <p class="quick-preview" id="quick-preview" role="status"></p>
+                  <div class="time-row">
+                    <label class="field"><span>開始</span><input type="time" id="quick-start" value="09:00" step="60"></label>
+                    <span class="time-arrow" aria-hidden="true">→</span>
+                    <label class="field"><span>終了</span><input type="time" id="quick-end" value="18:00" step="60"></label>
+                  </div>
+                  <details class="time-band"><summary>帯をなぞって時間を選ぶ</summary>
                   <p class="muted" id="preset-hint">帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。</p>
                   <div id="time-paint" aria-hidden="true">
                     <div class="clock-labels"><span>0時</span><span>6時</span><span>12時</span></div>
@@ -827,16 +849,8 @@ input[type="time"] { min-width: 0; width: 100%; font-variant-numeric: tabular-nu
                     <svg id="paint-pm" viewBox="0 0 720 44" preserveAspectRatio="none"><rect class="time-track" width="720" height="44" rx="8"/><g id="selection-pm"></g></svg>
                   </div>
 
-                  <p class="quick-preview" id="quick-preview" role="status"></p>
-                  <div class="time-row">
-                    <label class="field"><span>開始</span><input type="time" id="quick-start" value="09:00" step="60"></label>
-                    <span class="time-arrow" aria-hidden="true">→</span>
-                    <label class="field"><span>終了</span><input type="time" id="quick-end" value="18:00" step="60"></label>
-                  </div>
-                  <button class="button secondary full" type="button" id="add-selected-time">この時間帯を追加</button>
-                <button class="button secondary icon-text" type="button" id="add-activity">
-                  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>自由に入力</span>
-                </button>
+                  </details>
+                  <button class="button secondary full" type="button" id="add-selected-time">この内容を記録に追加</button>
                 </details>
 
 
