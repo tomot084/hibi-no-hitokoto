@@ -1,0 +1,3149 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f6ef">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-jlPPPjsCnQVh2FCNo+ESgBFzeLl1cVvtv9mrQMNwL0Y='; style-src 'sha256-H8yaePBesne+nj6VgWi7fxo+QnhOHa4PKt6jdOw8tGo='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <title>日々の足あと</title>
+  <style>
+:root {
+  color-scheme: light;
+  --canvas: #f7f6ef;
+  --paper: #fffef9;
+  --ink: #263429;
+  --muted: #586557;
+  --green: #375642;
+  --green-dark: #294333;
+  --green-soft: #e8efe2;
+  --green-pale: #f1f5ec;
+  --line: #dce3d6;
+  --field-line: #a9b5a5;
+  --warm: #f7ecd2;
+  --warm-ink: #665020;
+  --danger: #9a392f;
+  --gutter: 28px;
+  --radius: 22px;
+  --shadow: 0 2px 4px #26342907, 0 10px 28px #26342909;
+  font-family: "Hiragino Sans", "Yu Gothic", Meiryo, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; color: var(--ink); background: var(--canvas); }
+h1, h2, h3, p { margin: 0; }
+button, input, textarea, select { color: inherit; font: inherit; }
+button, summary { cursor: pointer; }
+button:disabled { cursor: default; }
+a { color: var(--green); text-underline-offset: .21em; }
+:focus-visible { outline: 3px solid #567a5c; outline-offset: 3px; }
+.frame { width: min(calc(100% - var(--gutter) - var(--gutter)), 1080px); margin-inline: auto; }
+.skip-link {
+  position: fixed;
+  inset: 7px auto auto 7px;
+  z-index: 8;
+  padding: 9px 14px;
+  background: var(--paper);
+  border-radius: 8px;
+  transform: translateY(-160%);
+}
+.skip-link:focus { transform: none; }
+.site-header { min-height: 76px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.brand, .header-actions { display: flex; align-items: center; gap: 10px; }
+.brand { font-size: 1rem; font-weight: 750; letter-spacing: .07em; white-space: nowrap; }
+.brand-mark { width: 38px; height: 38px; flex: 0 0 38px; }
+.header-actions { justify-content: end; }
+.mode-pill, .status-pill, .count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 29px;
+  padding: 3px 10px;
+  border: 1px solid #d6e1d4;
+  border-radius: 999px;
+  color: var(--green);
+  background: var(--green-soft);
+  font-size: .73rem;
+  font-weight: 730;
+  white-space: nowrap;
+}
+body[data-mode="reader"] .mode-pill, .status-pill[data-tone="wait"] {
+  border-color: #eadbb6;
+  color: var(--warm-ink);
+  background: var(--warm);
+}
+.status-pill[data-tone="error"] { border-color: #e9c9c1; color: var(--danger); background: #fbefeb; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 30%);
+  align-items: center;
+  min-height: 198px;
+  padding: 26px 35px;
+  margin-bottom: 19px;
+  background: radial-gradient(ellipse at 91% 18%, #f3edce90, transparent 47%), #e9efe2;
+  border: 1px solid #d9e4d3;
+  border-radius: 27px;
+}
+.hero-content { position: relative; z-index: 1; }
+.overline { color: var(--green); font-size: .73rem; font-weight: 740; letter-spacing: .12em; }
+.hero-kicker { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.hero-sun { width: 8px; height: 8px; border-radius: 50%; background: #ad7a35; box-shadow: 0 0 0 3px #e9d8ad; }
+.hero h1 {
+  font: 680 clamp(1.95rem, 4.6vw, 3.4rem)/1.25 "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif CJK JP", serif;
+  letter-spacing: .035em;
+}
+.hero p:last-child { color: var(--muted); margin-top: 8px; font-size: .94rem; }
+.hero-art { display: block; width: 100%; max-height: 178px; margin-left: auto; }
+h2 { font-size: 1.26rem; line-height: 1.42; letter-spacing: .015em; }
+h3, legend { font-size: 1rem; line-height: 1.45; font-weight: 750; }
+.muted { color: var(--muted); font-size: .86rem; line-height: 1.7; }
+.panel {
+  min-width: 0;
+  padding: 25px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+.compact { padding: 20px; }
+.panel-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+.panel-top .overline, .panel > .overline { margin-bottom: 4px; }
+.panel-top > div { min-width: 0; }
+.tinted { background: var(--green-pale); }
+.tinted h2 { margin-bottom: 6px; }
+.tinted .button { margin-top: 13px; }
+.gate, .standalone { width: min(100%, 520px); margin: 0 auto; }
+.gate { padding: 27px; }
+.gate h2 { font-size: 1.43rem; }
+.gate h2 + p { margin-top: 8px; }
+.gate form { margin-top: 18px; }
+.gate .primary { margin-top: 15px; }
+.tile-icon { display: grid; width: 42px; height: 42px; place-items: center; margin-bottom: 12px; border-radius: 13px; background: var(--green-soft); color: var(--green); }
+.tile-icon.gold { background: var(--warm); color: var(--warm-ink); }
+.tile-icon svg, .icon-text svg, .icon-only svg, .nav-button svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.button, .nav-button, .text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 8px 13px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: .86rem;
+  font-weight: 730;
+  line-height: 1.3;
+  text-align: center;
+  text-decoration: none;
+}
+.button.primary { color: #fff; background: var(--green); border-color: var(--green); }
+.button.primary:hover:not(:disabled) { background: var(--green-dark); }
+.button.secondary { color: var(--green); background: var(--green-pale); border-color: #cbd8c8; }
+.button.secondary:hover:not(:disabled) { background: var(--green-soft); }
+.button.quiet, .text-button { color: var(--green); background: transparent; }
+.button.quiet:hover:not(:disabled), .text-button:hover:not(:disabled) { background: var(--green-soft); }
+.button:disabled, .text-button:disabled { opacity: .56; }
+.button.full { width: 100%; }
+.button.icon-only { width: 44px; padding: 0; }
+.text-button { min-height: 40px; padding-inline: 7px; font-size: .8rem; }
+.text-button.danger { color: var(--danger); }
+.text-button.danger:hover:not(:disabled) { background: #f9ece8; }
+.header-actions .button, .journal-status .button { min-height: 38px; padding: 5px 8px; font-size: .76rem; }
+.header-actions .button svg, .journal-status .button svg { width: 16px; height: 16px; flex-basis: 16px; }
+.field { display: grid; gap: 5px; min-width: 0; }
+.field > span, .copy-block > label { font-size: .87rem; font-weight: 710; }
+.field + .field { margin-top: 11px; }
+input:not([type="radio"], [type="checkbox"]), textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--field-line);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 1rem;
+}
+input[type="date"], input[type="time"] { padding-inline: 8px; }
+input::placeholder, textarea::placeholder { color: #697567; opacity: 1; }
+input[readonly] { background: #f8faf5; }
+textarea { resize: vertical; min-height: 100px; }
+.check-row { display: flex; gap: 8px; align-items: center; min-height: 44px; margin-top: 5px; font-size: .85rem; cursor: pointer; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--green); }
+.check-row input { width: 18px; height: 18px; margin: 0; }
+.message { color: var(--green); font-size: .84rem; font-weight: 680; overflow-wrap: anywhere; }
+.message:not(:empty) { margin-top: 8px; }
+.message.error { color: var(--danger); }
+.top-message:not(:empty) { margin: -4px 0 11px; }
+.journal-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+.nav, .journal-status { display: flex; align-items: center; gap: 5px; }
+.nav {
+  background: #efefe6;
+  border: 1px solid #e4e7db;
+  border-radius: 13px;
+  padding: 4px;
+}
+.nav-button { padding-inline: 12px; min-height: 40px; white-space: nowrap; color: var(--muted); background: transparent; }
+.nav-button svg { width: 17px; height: 17px; flex-basis: 17px; }
+.nav-button[aria-current="page"] { color: var(--green); background: var(--paper); border-color: var(--line); box-shadow: 0 2px 4px #26342912; }
+.nav-button:hover:not([aria-current="page"]) { background: #e8eee3; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.sidebar { display: grid; gap: 15px; min-width: 0; }
+.reader-layout { grid-template-columns: minmax(0, 1.5fr) minmax(0, .9fr); }
+.share-layout { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+.editor-top { margin-bottom: 21px; align-items: end; }
+.date-field { flex: 0 1 157px; }
+fieldset { min-inline-size: 0; border: 0; padding: 0; margin: 0; }
+legend { padding: 0; }
+.mood-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
+.mood-choice {
+  position: relative;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 78px;
+  padding: 8px 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fafbf6;
+  font-size: .71rem;
+  font-weight: 680;
+  line-height: 1.28;
+  text-align: center;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.mood-choice:hover { background: var(--green-pale); }
+.mood-choice:has(input:checked) { border-color: var(--green); background: var(--green-soft); box-shadow: inset 0 0 0 1px var(--green); }
+.mood-choice:focus-within { outline: 3px solid #567a5c; outline-offset: 2px; }
+.mood-choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.mood-face { width: 36px; height: 36px; flex-shrink: 0; }
+.mood-choice input:checked ~ span { color: var(--green-dark); font-weight: 800; }
+.mood-section .text-button { margin-block: 2px -6px; }
+.outside-section { margin-top: 17px; }
+.outside-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
+.outside-options label { display: flex; align-items: center; gap: 7px; min-height: 45px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fafbf6; cursor: pointer; font-size: .86rem; }
+.outside-options label:has(input:checked) { border-color: var(--green); background: var(--green-soft); }
+.outside-section .text-button { margin: 2px 0 -6px; }
+.note-field { margin-top: 17px; }
+.note-field > span { font-size: 1rem; }
+.note-count { margin-top: 4px; color: var(--muted); font-size: .73rem; text-align: right; font-variant-numeric: tabular-nums; }
+.form-section { margin-top: 17px; padding-top: 17px; border-top: 1px solid var(--line); }
+.form-section > .muted { margin: 2px 0 9px; }
+.activity-list { display: grid; gap: 8px; }
+.activity-list:not(:empty) { margin-bottom: 9px; }
+.activity { min-width: 0; padding: 8px 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: #f9fbf6; }
+.activity-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.activity-title { font-variant-numeric: tabular-nums; }
+.time-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; }
+.time-row .field, .activity-info .field { margin: 0; }
+.time-arrow { color: var(--green); padding-bottom: 9px; }
+.activity-info { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+.save-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 11px; margin-top: 18px; }
+.save-bar .primary { flex: 1 1 160px; }
+.entry-list { display: grid; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.entry-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fafbf6;
+  text-align: left;
+  font-size: .86rem;
+}
+.entry-list button:hover, .entry-list button[aria-current="date"] { background: var(--green-soft); border-color: #b0c2ab; }
+.entry-list .entry-text { min-width: 0; }
+.entry-list .entry-text time { display: block; font-weight: 720; }
+.entry-teaser { display: block; overflow: hidden; color: var(--muted); font-size: .77rem; white-space: nowrap; text-overflow: ellipsis; }
+.entry-list .mood-face { width: 29px; height: 29px; }
+.recent-list .mood-face { width: 26px; height: 26px; }
+#reader-more { margin-top: 11px; }
+.day-card h2 { margin-bottom: 8px; }
+.day-card h3 { margin-bottom: 4px; }
+.day-card .overline { margin-bottom: 4px; }
+.day-mood { display: flex; gap: 8px; align-items: center; font-size: .94rem; font-weight: 720; }
+.day-mood .mood-face { width: 34px; height: 34px; }
+.outside-detail { display: inline-block; margin-top: 9px; padding: 3px 9px; border-radius: 999px; color: var(--green); background: var(--green-soft); font-size: .82rem; font-weight: 700; }
+.day-section { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+.day-note, .timeline-action { white-space: pre-wrap; overflow-wrap: anywhere; }
+.day-edit { margin-top: 13px; }
+.timeline { margin: 10px 0 0 5px; padding: 0 0 0 16px; border-left: 2px solid #ccd9c8; list-style: none; }
+.timeline li { position: relative; padding-bottom: 12px; }
+.timeline li::before { position: absolute; content: ""; top: 8px; left: -21px; width: 8px; height: 8px; border-radius: 50%; background: #7d9a77; }
+.timeline li:last-child { padding-bottom: 0; }
+.timeline-time { color: var(--green); font-size: .91rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.timeline-place { color: var(--muted); font-size: .84rem; overflow-wrap: anywhere; }
+.calendar-nav { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; margin: 10px 0; text-align: center; }
+.calendar-nav p { font-weight: 760; font-size: 1.16rem; font-variant-numeric: tabular-nums; }
+.weekday-row, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; }
+.weekday-row { color: var(--muted); font-size: .75rem; font-weight: 720; margin-bottom: 3px; }
+.weekday-row span:first-child { color: #9a4b42; }
+.weekday-row span:last-child { color: #4c6575; }
+.calendar-day {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+  align-items: center;
+  min-width: 0;
+  min-height: 54px;
+  padding: 2px 1px 3px;
+  border: 1px solid #e3e8dd;
+  border-radius: 9px;
+  background: #fbfcf8;
+  color: var(--muted);
+  font-size: .79rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.calendar-day:hover { background: var(--green-pale); }
+.calendar-day.has-entry { color: var(--ink); background: #f1f6ec; }
+.calendar-day[aria-pressed="true"] { border-color: var(--green); color: var(--green-dark); box-shadow: inset 0 0 0 1px var(--green); background: #e2eedf; }
+.calendar-day[aria-current="date"] .day-number { text-decoration: underline; text-decoration-color: #a77b3c; text-underline-offset: 3px; text-decoration-thickness: 2px; }
+.calendar-day .mood-face { width: 25px; height: 25px; }
+.calendar-indicator { display: block; width: 7px; height: 7px; margin: 9px 0; border-radius: 50%; background: #6d8b69; }
+.calendar-placeholder { width: 23px; height: 25px; }
+.calendar-caption { margin-top: 10px; }
+.mood-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 7px; }
+.mood-stat {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 3px;
+  padding: 5px 2px;
+  border-radius: 10px;
+  background: #f4f6ef;
+  text-align: center;
+  font-size: .7rem;
+  overflow-wrap: anywhere;
+}
+.mood-stat .mood-face { width: 27px; height: 27px; }
+.mood-stat strong { font-size: .82rem; }
+.mood-swatch { width: 24px; height: 4px; margin-bottom: 2px; }
+.week-list { display: grid; gap: 7px; margin-top: 12px; }
+.week-row { padding: 9px 10px; border-radius: 9px; background: var(--green-pale); font-size: .82rem; }
+.week-row strong { display: block; margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+.week-row p { color: var(--muted); }
+.trend-list { display: grid; gap: 4px; margin-top: 7px; }
+.trend-row {
+  display: grid;
+  grid-template-columns: minmax(63px, auto) minmax(42px, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 36px;
+  padding: 4px 5px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  font-size: .75rem;
+}
+.trend-row:hover, .trend-row[aria-pressed="true"] { background: var(--green-pale); border-color: var(--line); }
+.trend-row svg { width: 100%; height: 9px; border-radius: 8px; }
+.trend-count { color: var(--muted); }
+.section-intro { margin: 7px 0 12px; }
+.setup-guide, .restore-guide {
+  margin: 10px 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 0 10px;
+  background: #f8faf5;
+  font-size: .84rem;
+}
+.setup-guide summary, .restore-guide summary { min-height: 41px; padding: 9px 0; color: var(--green); font-weight: 720; }
+.setup-guide ol { padding-left: 1.3em; margin: 2px 0 7px; }
+.setup-guide li + li { margin-top: 5px; }
+.setup-links { display: flex; flex-wrap: wrap; gap: 7px 13px; margin-bottom: 10px; }
+.restore-guide > .field { margin-bottom: 9px; }
+.token-guide form { margin-bottom: 10px; }
+.token-guide .button { margin-top: 8px; }
+.repo-name { font-weight: 760; overflow-wrap: anywhere; margin: 9px 0 3px; }
+#sync-now { margin-top: 11px; }
+.copy-block { margin-top: 11px; }
+.copy-row { display: flex; gap: 6px; margin-top: 5px; }
+.copy-row .button { flex-shrink: 0; }
+.copy-block .text-button { margin-left: -5px; }
+.share-card .copy-block + .muted { margin-top: 5px; }
+.history-note { margin-top: 5px; font-size: .78rem; }
+#reader-preview { margin: 5px 0 0 -7px; }
+.site-footer { color: var(--muted); text-align: center; font-size: .76rem; line-height: 1.6; margin: 15px 0 8px; }
+.dialog { width: min(calc(100% - 28px), 650px); color: var(--ink); max-height: calc(100% - 28px); }
+.dialog::backdrop { background: #202c23a3; }
+.dialog fieldset { margin-top: 11px; }
+.dialog legend { font-size: .88rem; }
+.dialog .primary { margin-top: 13px; }
+.conflict-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.conflict-option { display: grid; align-content: start; padding: 7px; border: 1px solid var(--line); border-radius: 9px; overflow-wrap: anywhere; }
+.conflict-option:has(input:checked) { background: var(--green-soft); border-color: var(--green); }
+.conflict-option > span { font-size: .84rem; font-weight: 700; }
+.conflict-option p { margin: 5px 0 0; font-size: .78rem; white-space: pre-wrap; }
+main { padding-bottom: max(17px, env(safe-area-inset-bottom)); }
+
+@media (max-width: 760px) {
+  :root { --gutter: 16px; --radius: 17px; }
+  .frame { max-width: 580px; }
+  .site-header { min-height: 63px; }
+  .hero { min-height: 145px; padding: 18px 18px; grid-template-columns: minmax(0, 1fr) 105px; margin-bottom: 13px; border-radius: 21px; }
+  .hero h1 { font-size: clamp(1.62rem, 6.4vw, 2.36rem); }
+  .hero p:last-child { font-size: .82rem; margin-top: 5px; }
+  .hero-art { position: absolute; right: -10px; bottom: 8px; width: 42%; opacity: .94; }
+  .journal-bar { flex-wrap: wrap; margin-bottom: 10px; gap: 4px; }
+  .nav { width: 100%; }
+  .nav-button { flex: 1 1 auto; padding-inline: 6px; font-size: .82rem; }
+  .journal-status { width: 100%; justify-content: flex-end; min-height: 30px; }
+  .workspace { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .sidebar { gap: 12px; }
+  .panel { padding: 17px; }
+  .gate { padding: 20px; }
+  .trend-row { min-height: 44px; }
+}
+@media (max-width: 390px) {
+  :root { --gutter: 12px; }
+  .brand { gap: 8px; font-size: .86rem; letter-spacing: .035em; }
+  .brand-mark { width: 34px; height: 34px; flex-basis: 34px; }
+  .header-actions { gap: 3px; }
+  .header-actions .mode-pill { padding-inline: 7px; }
+  .header-actions #lock { padding-inline: 5px; font-size: .74rem; }
+  .header-actions #lock svg { display: none; }
+  .hero { grid-template-columns: minmax(0, 1fr) 75px; padding-inline: 14px; }
+  .hero-art { right: -15px; width: 40%; }
+  .hero p:last-child { max-width: 17em; }
+  .nav-button { gap: 4px; padding-inline: 3px; }
+  .nav-button svg { width: 15px; height: 15px; flex-basis: 15px; }
+  .panel { padding: 14px; }
+  .mood-options { gap: 5px; }
+  .mood-choice { font-size: .75rem; }
+  .mood-choice .mood-face { width: 32px; height: 32px; }
+  .mood-summary { gap: 4px; }
+  .mood-stat { font-size: .65rem; }
+  .date-field { flex-basis: 142px; }
+  .calendar-day .mood-face { width: 22px; height: 22px; }
+  .calendar-placeholder { height: 22px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .button, .nav-button, .mood-choice, .calendar-day { transition: background-color .16s, border-color .16s, box-shadow .16s; }
+}
+
+.quick-time { padding: 10px 12px; margin: 10px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--green-pale); }
+.quick-time summary { padding: 3px 0; font-weight: 750; }
+.time-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 7px; }
+.time-presets [aria-pressed="true"] { background: var(--green); color: white; }
+#time-paint { margin: 10px 0; touch-action: none; user-select: none; }
+#time-paint svg { display: block; width: 100%; height: 44px; cursor: crosshair; }
+.time-track { fill: #dbe5d4; }
+.time-selection { fill: #638463; }
+.clock-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: .75rem; margin: 5px 0 2px; }
+.quick-preview { font-size: .85rem; font-weight: 700; margin: 8px 0; }
+
+/* A compact diary page, with the recorded day as the main surface. */
+:root {
+  --canvas: #f3f1ec;
+  --paper: #fffefa;
+  --ink: #272a30;
+  --muted: #626670;
+  --green: #414f77;
+  --green-dark: #303b5c;
+  --green-soft: #e9ecf3;
+  --green-pale: #f4f5f8;
+  --line: #dedfdc;
+  --field-line: #a7abb5;
+  --radius: 8px;
+  --shadow: none;
+}
+body { background: var(--canvas); }
+.site-header { min-height: 68px; border-bottom: 1px solid #d9dad7; margin-bottom: 16px; }
+.brand { font-weight: 760; letter-spacing: .04em; }
+.brand-mark {
+  display: grid; place-items: center; width: 31px; height: 33px; flex-basis: 31px;
+  color: var(--paper); background: var(--ink); border-radius: 2px;
+  font-family: "Yu Mincho", serif; font-size: 18px; font-weight: 500;
+}
+.hero { display: block; min-height: 0; padding: 18px 0 27px; margin-bottom: 0; background: none; border: 0; border-radius: 0; }
+.hero h1 { font-family: inherit; font-size: 2rem; font-weight: 650; letter-spacing: .02em; }
+.hero .overline { font-size: .68rem; color: var(--muted); }
+.hero p:last-child { font-size: .88rem; }
+body:has(#journal:not([hidden])) .hero { display: none; }
+.mode-pill, .status-pill, .count-pill { background: transparent; border: 0; border-radius: 0; padding-inline: 0; font-size: .73rem; }
+body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color: var(--muted); }
+.panel { border-radius: 8px; box-shadow: none; }
+.sidebar > .panel { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 18px 9px 22px; }
+.tile-icon { display: none; }
+.gate { margin-top: 10px; border-top: 3px solid var(--green); }
+.gate > .overline { margin-bottom: 8px; }
+.journal-bar { position: sticky; top: 0; z-index: 5; background: var(--canvas); padding: 7px 0 10px; }
+.nav { border: 0; border-radius: 0; padding: 0; gap: 20px; background: transparent; }
+.nav-button { min-height: 44px; border-radius: 0; padding: 7px 0; border-width: 0 0 2px; }
+.nav-button[aria-current="page"] { background: transparent; box-shadow: none; border-color: var(--green); }
+.nav-button:hover:not([aria-current="page"]) { background: transparent; color: var(--ink); border-color: #bcc2d0; }
+.nav-button svg { display: none; }
+.button { border-radius: 6px; }
+.button.secondary { background: var(--paper); border-color: #c9ccd3; }
+.editor { padding: 23px 25px; border-top: 3px solid var(--green); }
+.editor-top { margin-bottom: 8px; }
+.editor-top .overline { display: none; }
+.editor-top h2 { font-size: 1.6rem; font-weight: 630; letter-spacing: -.02em; }
+.day-navigation { display: flex; justify-content: space-between; margin: 0 -7px 18px; border-bottom: 1px solid var(--line); padding-bottom: 9px; }
+.day-navigation .button { font-size: .78rem; min-height: 36px; padding-inline: 7px; }
+.form-section { margin: 0 0 24px; padding: 0; border: 0; }
+.form-section h3 { font-size: .82rem; letter-spacing: .1em; color: var(--muted); }
+#time-empty { padding: 11px 0; }
+.quick-time { margin: 10px 0 8px; background: #f4f5f8; border: 1px solid #e0e3eb; border-radius: 6px; }
+.quick-time summary { font-size: .87rem; min-height: 32px; }
+.time-presets { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
+.time-presets .button { min-width: 68px; flex-shrink: 0; border-radius: 5px; font-size: .83rem; }
+.time-presets [aria-pressed="true"] { background: var(--green); border-color: var(--green); }
+.time-track { fill: #e0e3eb; }
+.time-selection { fill: #6f7fa6; }
+.quick-preview { font-variant-numeric: tabular-nums; letter-spacing: .025em; }
+.activity-list { gap: 0; }
+.activity { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0; }
+.activity-summary {
+  display: grid; grid-template-columns: 1fr auto; column-gap: 12px; row-gap: 3px;
+  list-style: none; padding: 12px 2px; min-height: 68px;
+}
+.activity-summary::-webkit-details-marker { display: none; }
+.activity-summary::after { content: "編集"; grid-column: 2; grid-row: 2; font-size: .69rem; color: var(--muted); text-align: right; }
+.activity[open] .activity-summary::after { content: "閉じる"; }
+.activity-title { grid-column: 1; grid-row: 1; color: var(--green); font-size: .83rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.activity-description { grid-column: 1; grid-row: 2; font-size: .91rem; font-weight: 650; overflow-wrap: anywhere; }
+.activity-duration { grid-column: 2; grid-row: 1; color: var(--muted); font-size: .76rem; white-space: nowrap; }
+.activity-strip { grid-column: 1 / -1; width: 100%; height: 4px; margin-top: 4px; }
+.activity-editor { padding: 6px 2px 10px; }
+.activity-undo { display: flex; align-items: center; justify-content: space-between; min-height: 0; font-size: .77rem; color: var(--muted); }
+.activity-undo:has(#undo-activity:not([hidden])) { min-height: 40px; }
+.mood-section { border-top: 1px solid var(--line); padding-top: 17px; }
+.mood-choice { border-radius: 6px; background: transparent; }
+.mood-choice:has(input:checked) { background: var(--green-soft); border-color: var(--green); box-shadow: none; }
+.outside-options label { border-radius: 6px; background: transparent; }
+.note-field { margin-top: 20px; }
+textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e8e2 32px) !important; line-height: 32px; padding-top: 0; }
+.save-state { font-size: .75rem; color: var(--muted); }
+.save-bar .primary { flex-grow: 0; min-width: 170px; }
+.entry-list button { background: transparent; border-width: 0 0 1px; border-radius: 0; padding: 9px 2px; }
+.entry-list button:hover, .entry-list button[aria-current="date"] { background: var(--green-soft); }
+.calendar-day { border-radius: 4px; background: transparent; }
+.calendar-day.has-entry { background: #eff1f5; }
+.calendar-day[aria-pressed="true"] { border-color: var(--green); background: #e4e8f1; box-shadow: inset 0 0 0 1px var(--green); }
+.mood-stat { background: transparent; border-radius: 0; }
+.week-row { background: transparent; border-radius: 0; border-bottom: 1px solid var(--line); padding: 10px 0; }
+.week-row p { line-height: 1.9; }
+.day-card { border-top: 3px solid var(--green); }
+.day-card > .overline { display: none; }
+.day-card h2 { font-size: 1.45rem; }
+.site-footer { text-align: left; font-size: .72rem; }
+@media (max-width: 760px) {
+  .site-header { min-height: 60px; margin-bottom: 7px; }
+  .hero { padding: 14px 0 20px; }
+  .hero h1 { font-size: 1.7rem; }
+  .journal-bar { gap: 0; padding-bottom: 7px; }
+  .nav { gap: 22px; }
+  .nav-button { flex: 0 0 auto; }
+  .journal-status { min-height: 24px; }
+  .panel, .editor { padding: 17px; }
+  .editor-top h2 { font-size: 1.35rem; }
+  .sidebar > .panel { padding-inline: 3px; }
+  body:has(#editor-view:not([hidden])) main { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+  .save-bar {
+    position: fixed; z-index: 6; left: 0; right: 0; bottom: 0; margin: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--paper); border-top: 1px solid #cdd0d8;
+  }
+  .save-bar .primary { min-width: 0; flex: 1 1 120px; }
+  .save-bar .danger { font-size: .72rem; padding-inline: 2px; }
+  .save-state { font-size: .7rem; }
+}
+@media (max-width: 390px) {
+  .editor, .panel { padding: 14px; }
+  .editor-top h2 { font-size: 1.12rem; }
+  .nav { gap: 18px; }
+  .brand-mark { width: 28px; height: 30px; flex-basis: 28px; }
+  .save-bar { padding-inline: 12px; gap: 7px; }
+}
+
+.time-selection { fill: currentColor; }
+.time-presets [data-action="仕事"][aria-pressed="true"] { background: #52668a; border-color: #52668a; }
+.time-presets [data-action="昼休み"][aria-pressed="true"] { background: #765b36; border-color: #765b36; }
+.time-presets [data-action="睡眠"][aria-pressed="true"] { background: #756580; border-color: #756580; }
+.time-presets [data-action="外出"][aria-pressed="true"] { background: #4d6d5b; border-color: #4d6d5b; }
+
+.fine-controls { margin-top: 7px; border-top: 1px solid var(--line); }
+.fine-controls > summary { min-height: 40px; padding: 8px 0; font-size: .76rem; font-weight: 600; color: var(--muted); }
+.fine-controls .time-row { margin: 3px 0 9px; }
+.memo-details { margin-top: 18px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.memo-details > summary { min-height: 44px; padding: 10px 0; font-size: .87rem; font-weight: 680; }
+.memo-details .note-field { margin-top: 0; }
+.memo-details .note-field > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.memo-details .note-count { margin-bottom: 9px; }
+.day-tools { margin-top: 10px; font-size: .76rem; color: var(--muted); }
+.day-tools > summary { min-height: 40px; padding: 8px 0; }
+.sync-details { margin-top: 0; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 10px 9px; }
+.sync-details > summary { font-size: .83rem; font-weight: 650; color: var(--muted); min-height: 40px; padding: 8px 0; }
+.sync-details .button { margin-top: 9px; }
+
+/* Low-effort check-in first; precise time entry remains within reach. */
+.checkin-hint { color: var(--muted); font-size: .8rem; margin-bottom: 14px; }
+#editor-fields > .mood-section { border-top: 0; padding-top: 0; }
+#editor-fields > .form-section { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
+.quick-time .time-row { margin: 12px 0; }
+.quick-time #add-activity { margin-top: 10px; width: 100%; }
+.day-navigation .button, .text-button, .quick-time > summary,
+.day-tools > summary, .sync-details > summary { min-height: 44px; }
+.quick-time > summary { display: list-item; padding-block: 10px; }
+.time-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; overflow: visible; }
+.time-presets .button { min-width: 0; min-height: 44px; padding-inline: 4px; }
+input[type="time"] { min-width: 0; width: 100%; font-variant-numeric: tabular-nums; }
+.quick-preview { min-height: 2em; font-size: .87rem; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  html { scroll-padding-top: 120px; scroll-padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+  input, textarea, summary, button { scroll-margin-block: 12px; }
+}
+
+/* Review facts remain separate from interpretation and recording coverage. */
+.month-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; border-block: 1px solid var(--line); padding-block: 14px; }
+.review-metric { display: grid; gap: 3px; }
+.review-metric > span { font-size: .76rem; color: var(--muted); }
+.review-metric > strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.review-metric > small { font-size: .69rem; color: var(--muted); }
+.review-note { font-size: .75rem; margin-top: 10px; }
+.week-progress { font-size: .72rem; color: var(--muted); }
+.week-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin-block: 8px; }
+.week-day { border: 1px solid transparent; border-radius: 5px; background: transparent; padding: 5px 0; display: grid; justify-items: center; gap: 4px; font-size: .73rem; min-height: 76px; }
+.week-day:hover, .week-day:focus-visible { background: var(--green-soft); }
+.week-day .mood-face { width: 25px; height: 25px; }
+.week-unrated { min-height: 25px; color: var(--muted); }
+.week-day small { font-size: .72rem; }
+.leave-actions { display: grid; gap: 10px; margin-top: 18px; }
+#leave-note { margin-top: 12px; }
+#leave-dialog { max-width: min(440px, calc(100vw - 32px)); }
+.trend-row { min-height: 44px; }
+.header-actions .button, .journal-status .button { min-height: 44px; }
+
+.trend-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; padding-block: 8px; }
+.trend-row > svg { grid-column: 1 / -1; grid-row: 2; }
+.trend-count { grid-column: 2; grid-row: 1; }
+
+/* The shared entry point shows time context before individual entries. */
+.reader-overview { grid-column: 1 / -1; border-top: 3px solid var(--green); }
+.reader-overview h2 { font-size: 1.25rem; }
+#reader-window { font-size: .82rem; margin-top: 6px; }
+.recent-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 16px; }
+.recent-day { min-height: 92px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px 1px; border: 1px solid transparent; border-radius: 6px; background: transparent; font-size: .75rem; }
+.recent-day[aria-pressed="true"] { border-color: var(--green); background: var(--green-soft); }
+.recent-day .mood-face { width: 29px; height: 29px; }
+.recent-day small { font-size: .72rem; overflow-wrap: anywhere; }
+.recent-unrated { height: 29px; color: var(--muted); }
+.reader-life { margin-top: 18px; }
+.reader-life h3 { font-size: .88rem; margin-bottom: 8px; }
+.life-entry { display: grid; gap: 4px; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: transparent; padding: 12px 0; min-height: 44px; font-size: .86rem; }
+.life-entry strong { font-size: .78rem; color: var(--muted); }
+.life-entry span { overflow-wrap: anywhere; }
+.month-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.review-numbers { margin-top: 12px; border-top: 1px solid var(--line); }
+.review-numbers summary, .week-numbers summary { min-height: 44px; padding-block: 10px; font-size: .78rem; color: var(--muted); }
+.manual-save-hint { font-size: .78rem; margin-block: 5px 8px; }
+#save-message:not(:empty) { padding: 10px 0; }
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#main">本文へ移動</a>
+  <header class="site-header frame">
+    <div class="brand">
+<span class="brand-mark" aria-hidden="true">日</span>
+      <span>日々の足あと</span>
+    </div>
+    <div class="header-actions">
+      <span class="mode-pill" id="mode">自分の日記</span>
+      <button class="button quiet icon-text" type="button" id="lock" hidden aria-label="日記を閉じる">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+        <span id="lock-label">閉じる</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="frame" id="main" tabindex="-1">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-content">
+        <p class="overline hero-kicker"><span id="hero-label">DAILY RECORD</span></p>
+        <h1 id="hero-title">一日の記録</h1>
+        <p id="hero-note">時間・場所・気分を記録する</p>
+      </div>
+
+    </section>
+
+    <noscript><p class="panel standalone">ブラウザーのJavaScriptを有効にすると、この日記を使えます。</p></noscript>
+    <p class="panel standalone" id="system-message" role="status" hidden></p>
+
+    <section class="panel gate" id="owner-gate" hidden aria-labelledby="gate-title">
+      <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h12a2 2 0 0 1 2 2v14H6a3 3 0 0 1 0-6h13M6 4a2 2 0 0 0-2 2v11m4-8h7"/></svg></span>
+      <p class="overline">編集用</p>
+      <h2 id="gate-title">日記を開く</h2>
+      <p class="muted" id="gate-note"></p>
+      <form id="owner-gate-form">
+        <label class="field">
+          <span>自分用の合言葉</span>
+          <input type="password" id="passphrase" required maxlength="256" spellcheck="false">
+        </label>
+        <label class="field" id="confirm-field" hidden>
+          <span>合言葉をもう一度</span>
+          <input type="password" id="confirm-passphrase" autocomplete="new-password" maxlength="256" spellcheck="false">
+        </label>
+        <button type="submit" class="button primary full" id="open-owner">日記を開く</button>
+        <p class="message" id="owner-gate-message" role="status"></p>
+      </form>
+    </section>
+
+    <section class="panel gate" id="reader-gate" hidden aria-labelledby="reader-gate-title">
+      <span class="tile-icon gold" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3m-4 5v2"/></svg></span>
+      <p class="overline">閲覧専用</p>
+      <h2 id="reader-gate-title">共有された日記を開く</h2>
+      <p class="muted">最初に受け取った閲覧コードで、日々の記録を読み返せます。</p>
+      <form id="reader-gate-form">
+        <label class="field">
+          <span>閲覧コード</span>
+          <input type="password" id="reader-code" required maxlength="64" autocomplete="off" autocapitalize="none" spellcheck="false">
+        </label>
+        <label class="check-row" id="remember-row"><input type="checkbox" id="remember-code"><span>この端末で覚える</span></label>
+        <button type="submit" class="button primary full" id="open-reader">日記を読む</button>
+        <p class="message" id="reader-gate-message" role="status"></p>
+      </form>
+    </section>
+
+    <div id="journal" hidden>
+      <div class="journal-bar">
+        <nav class="nav" aria-label="日記の画面">
+          <button class="nav-button" type="button" id="nav-main" aria-current="page">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h12a2 2 0 0 1 2 2v14H6a3 3 0 0 1 0-6h13M6 4a2 2 0 0 0-2 2v11m4-8h7"/></svg>
+            <span id="nav-main-label">記録する</span>
+          </button>
+          <button class="nav-button" type="button" id="nav-month">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="15" rx="2"/><path d="M8 3v6m8-6v6M4 11h16m-12 5h2m4 0h2"/></svg>
+            <span>月の振り返り</span>
+          </button>
+          <button class="nav-button" type="button" id="nav-share">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 13a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.6 1.6m2.6 4.4a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.6-1.6"/></svg>
+            <span>共有設定</span>
+          </button>
+        </nav>
+        <div class="journal-status">
+          <button type="button" class="button quiet icon-text" id="refresh-reader" hidden aria-label="最新の記録を読み込む">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8m2-14v6h-6"/></svg><span>更新</span>
+          </button>
+          <span class="status-pill" id="sync-pill"><span class="status-dot" aria-hidden="true"></span><span id="sync-label">端末に保存</span></span>
+        </div>
+      </div>
+      <p class="message top-message" id="top-message" role="status"></p>
+
+      <div class="workspace" id="editor-view" hidden>
+        <section class="panel editor" aria-labelledby="editor-title">
+          <div class="panel-top editor-top">
+            <div>
+              <p class="overline" id="editor-kicker">今日の記録</p>
+              <h2 id="editor-title" tabindex="-1">今日</h2>
+            </div>
+            <label class="field date-field">
+              <span>日付を選ぶ</span>
+              <input type="date" id="entry-date" min="0001-01-01" max="9999-12-31" required>
+            </label>
+          </div>
+          <div class="day-navigation">
+            <button type="button" class="button quiet" id="previous-day" aria-label="前の日">← 前の日</button>
+            <button type="button" class="button quiet" id="go-today">今日</button>
+            <button type="button" class="button quiet" id="next-day" aria-label="次の日">次の日 →</button>
+          </div>
+          <form id="editor-form">
+            <fieldset id="editor-fields">
+              <p class="checkin-hint">気分・外出はタップで保存します。共有設定済みなら専務にも反映されます。</p>
+              <fieldset class="mood-section">
+                <legend>その日の気分</legend>
+                <div class="mood-options" id="mood-options"></div>
+                <button type="button" class="text-button" id="clear-mood" hidden>選択を外す</button>
+              </fieldset>
+
+              <fieldset class="outside-section">
+                <legend>外出について</legend>
+                <div class="outside-options" id="outside-options">
+                  <label><input type="radio" name="outside" value="out"><span>外に出た</span></label>
+                  <label><input type="radio" name="outside" value="home"><span>家で過ごした</span></label>
+                </div>
+                <button type="button" class="text-button" id="clear-outside" hidden>選択を外す</button>
+              </fieldset>
+
+              <section class="form-section" aria-labelledby="time-title">
+                <h3 id="time-title">過ごした時間</h3>
+                <p class="muted manual-save-hint">時間・場所・メモは「記録を保存」で確定します。</p>
+                <p class="muted" id="time-empty">仕事・休憩・睡眠など、覚えておきたい時間を。</p>
+                <div class="activity-list" id="activity-list"></div>
+                <div class="activity-undo"><span id="activity-notice" role="status"></span><button type="button" class="text-button" id="undo-activity" hidden>元に戻す</button></div>
+                <details class="quick-time" id="time-composer">
+                  <summary>時間を追加</summary>
+                  <div class="time-presets" id="time-presets" aria-label="行動を選ぶ">
+                    <button type="button" class="button secondary" data-action="仕事" data-start="09:00" data-end="18:00" aria-pressed="true">仕事</button>
+                    <button type="button" class="button secondary" data-action="昼休み" data-start="12:00" data-end="13:00" aria-pressed="false">昼休み</button>
+                    <button type="button" class="button secondary" data-action="睡眠" data-start="23:00" data-end="07:00" aria-pressed="false">睡眠</button>
+                    <button type="button" class="button secondary" data-action="外出" data-start="10:00" data-end="11:00" aria-pressed="false">外出</button>
+                  </div>
+                  <p class="muted" id="preset-hint">帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。</p>
+                  <div id="time-paint" aria-hidden="true">
+                    <div class="clock-labels"><span>0時</span><span>6時</span><span>12時</span></div>
+                    <svg id="paint-am" viewBox="0 0 720 44" preserveAspectRatio="none"><rect class="time-track" width="720" height="44" rx="8"/><g id="selection-am"></g></svg>
+                    <div class="clock-labels"><span>12時</span><span>18時</span><span>24時</span></div>
+                    <svg id="paint-pm" viewBox="0 0 720 44" preserveAspectRatio="none"><rect class="time-track" width="720" height="44" rx="8"/><g id="selection-pm"></g></svg>
+                  </div>
+
+                  <p class="quick-preview" id="quick-preview" role="status"></p>
+                  <div class="time-row">
+                    <label class="field"><span>開始</span><input type="time" id="quick-start" value="09:00" step="60"></label>
+                    <span class="time-arrow" aria-hidden="true">→</span>
+                    <label class="field"><span>終了</span><input type="time" id="quick-end" value="18:00" step="60"></label>
+                  </div>
+                  <button class="button secondary full" type="button" id="add-selected-time">この時間帯を追加</button>
+                <button class="button secondary icon-text" type="button" id="add-activity">
+                  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>自由に入力</span>
+                </button>
+                </details>
+
+
+              </section>
+              <details class="memo-details" id="memo-details">
+                <summary id="memo-label">メモを追加</summary>
+              <label class="field note-field">
+                <span>メモ</span>
+                <textarea id="note" maxlength="600" rows="3" aria-describedby="note-count" placeholder="今日は外に出られた。"></textarea>
+              </label>
+
+              <p class="note-count" id="note-count">0 / 600文字</p>
+              </details>
+
+
+
+              <details class="day-tools" id="day-tools" hidden>
+                <summary>この日の操作</summary>
+                <button type="button" class="text-button danger" id="delete-entry" hidden>この日を削除</button>
+              </details>
+
+              <div class="save-bar">
+                <button type="submit" class="button primary icon-text" id="save-entry">
+                  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span id="save-label">記録を保存</span>
+                </button>
+                <span class="save-state" id="save-state" role="status">残せる項目だけで大丈夫です</span>
+
+              </div>
+            </fieldset>
+            <p class="message" id="save-message" role="status"></p>
+          </form>
+        </section>
+
+        <aside class="sidebar">
+          <section class="panel compact" aria-labelledby="recent-title">
+            <div class="panel-top">
+              <h2 id="recent-title">最近の記録</h2>
+            </div>
+            <p class="muted" id="recent-empty">保存した日付が、ここに並びます。</p>
+            <ul class="entry-list recent-list" id="recent-list"></ul>
+          </section>
+          <details class="panel compact sync-details">
+            <summary id="editor-sync-title">保存と共有</summary>
+            <p class="muted" id="editor-sync-note">GitHubをつなぐと、全日分を専務と共有できます。</p>
+            <button class="button secondary" type="button" id="open-share-settings">共有設定を開く</button>
+          </details>
+        </aside>
+      </div>
+
+      <div class="workspace reader-layout" id="reader-view" hidden>
+        <section class="panel reader-overview" id="reader-overview" aria-labelledby="reader-overview-title">
+          <h2 id="reader-overview-title" tabindex="-1">最近のようす</h2>
+          <p class="muted" id="reader-window"></p>
+          <p class="review-note">記録のない日は、体調の良し悪しを示しません。書かれた内容だけを表示しています。</p>
+          <div class="recent-days" id="reader-week"></div>
+          <div id="reader-life" class="reader-life"></div>
+        </section>
+        <article class="panel day-card" id="reader-detail" aria-label="選んだ日の記録"></article>
+        <section class="panel compact journal-index" aria-labelledby="reader-list-title">
+          <div class="panel-top">
+            <div><p class="overline">閲覧専用</p><h2 id="reader-list-title" tabindex="-1">日々の記録</h2></div>
+            <span class="count-pill" id="reader-count"></span>
+          </div>
+          <p class="muted" id="reader-empty">保存された日記が、ここに並びます。</p>
+          <ul class="entry-list" id="reader-list"></ul>
+          <button class="button secondary full" type="button" id="reader-more" hidden>さらに表示</button>
+        </section>
+      </div>
+
+      <div class="workspace month-layout" id="month-view" hidden>
+        <section class="panel calendar-panel" aria-labelledby="month-title">
+          <div class="panel-top">
+            <div><p class="overline">月の振り返り</p><h2 id="month-title" tabindex="-1">気分のカレンダー</h2></div>
+            <button class="text-button" type="button" id="current-month">今月</button>
+          </div>
+          <div class="calendar-nav">
+            <button class="button secondary icon-only" type="button" id="previous-month" aria-label="前の月">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>
+            </button>
+            <p id="month-label" role="status"></p>
+            <button class="button secondary icon-only" type="button" id="next-month" aria-label="次の月">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+          </div>
+          <div class="weekday-row" aria-hidden="true"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+          <div class="calendar-grid" id="calendar-grid" role="group" aria-label="日付を選ぶ"></div>
+          <div class="calendar-caption month-metrics" id="month-count"></div>
+          <p class="muted review-note">記録のない日は集計に含みません。記録の有無から体調は判断できません。</p>
+          <details class="review-numbers">
+            <summary>気分の分布・数値を見る</summary>
+            <p class="muted" id="month-average"></p>
+            <div class="mood-summary" id="month-moods" aria-label="気分ごとの日数"></div>
+          </details>
+        </section>
+        <aside class="sidebar">
+          <article class="panel day-card" id="month-detail" aria-label="選んだ日の記録"></article>
+          <section class="panel compact" aria-labelledby="week-title">
+            <p class="overline">週ごとの記録</p>
+            <h2 id="week-title">週の振り返り</h2>
+            <p class="muted review-note">月〜日の7日間。外出の記録がない日は「—」で表示します。</p>
+            <div class="week-list" id="week-list"></div>
+          </section>
+          <section class="panel compact trends" aria-labelledby="trend-title">
+            <div class="panel-top">
+              <div><p class="overline">気分の分布</p><h2 id="trend-title">最近6か月</h2></div>
+            </div>
+            <p class="muted">色の帯は気分を記録した日の割合です。記録日数と合わせて見比べられます。</p>
+            <div class="trend-list" id="trend-list"></div>
+          </section>
+        </aside>
+      </div>
+
+      <div class="workspace share-layout" id="share-view" hidden>
+        <section class="panel" aria-labelledby="connection-title">
+          <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 16a4 4 0 1 1 0-8 5 5 0 0 1 9-1 4.5 4.5 0 0 1 2 9H7Zm5-5v9m-3-3 3 3 3-3"/></svg></span>
+          <p class="overline">保存先</p>
+          <h2 id="connection-title" tabindex="-1">GitHubに保存</h2>
+          <div id="connect-setup">
+            <p class="muted section-intro">GitHubをつなぐと、この端末の記録を全日分まとめて同期します。</p>
+            <details class="setup-guide">
+              <summary>GitHubの準備を確認する</summary>
+              <ol>
+                <li>GitHub Pagesの公開URLでこのアプリを開きます。</li>
+                <li>GitHubに<strong>保存専用の公開リポジトリ</strong>を作り、READMEを追加して初期化します。ここには暗号化した日記ファイルが入ります。</li>
+                <li>Fine-grained personal access token を作ります。対象を保存用リポジトリ1つに絞り、Repository permissions の <strong>Contents を Read and write</strong> にします。</li>
+              </ol>
+              <div class="setup-links">
+                <a href="https://github.com/new" target="_blank" rel="noopener noreferrer">リポジトリを作る ↗</a>
+                <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">トークンを作る ↗</a>
+              </div>
+            </details>
+            <form id="connect-form">
+              <label class="field">
+                <span>保存用リポジトリ</span>
+                <input type="text" id="repo-name" maxlength="140" required placeholder="ユーザー名/hibi-journal-data" autocomplete="off" autocapitalize="none" spellcheck="false">
+              </label>
+              <label class="field">
+                <span>書き込みトークン</span>
+                <input type="password" id="repo-token" maxlength="300" required placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+              </label>
+              <details class="restore-guide" id="restore-guide">
+                <summary>別の端末で使っていた日記を開く</summary>
+                <label class="field">
+                  <span>以前発行した閲覧コード</span>
+                  <input type="password" id="existing-code" maxlength="64" autocomplete="off" autocapitalize="none" spellcheck="false">
+                </label>
+              </details>
+              <button type="submit" class="button primary full" id="connect">接続して同期</button>
+            </form>
+          </div>
+          <div id="connected" hidden>
+            <p class="repo-name" id="connected-repo"></p>
+            <p class="muted" id="last-synced"></p>
+            <button type="button" class="button primary" id="sync-now">今すぐ同期</button>
+            <details class="setup-guide token-guide">
+              <summary>トークンを更新する</summary>
+              <form id="update-token-form">
+                <label class="field">
+                  <span>新しい書き込みトークン</span>
+                  <input type="password" id="updated-token" maxlength="300" required placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+                </label>
+                <button type="submit" class="button secondary" id="update-token">更新して同期</button>
+              </form>
+            </details>
+            <button class="text-button danger" type="button" id="disconnect">この端末の接続を解除</button>
+          </div>
+          <p class="message" id="connection-message" role="status"></p>
+        </section>
+
+        <section class="panel share-card" aria-labelledby="share-title">
+          <span class="tile-icon gold" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 13a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.6 1.6m2.6 4.4a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.6-1.6"/></svg></span>
+          <p class="overline">全日分・閲覧専用</p>
+          <h2 id="share-title">専務に共有</h2>
+          <p class="muted section-intro" id="share-intro">GitHubへの初回同期が完了すると、固定の閲覧URLとコードを渡せます。</p>
+          <div id="share-fields" hidden>
+            <div class="copy-block">
+              <label for="share-link">固定の閲覧URL</label>
+              <div class="copy-row">
+                <input type="text" id="share-link" readonly spellcheck="false">
+                <button type="button" class="button secondary" id="copy-link" aria-label="閲覧URLをコピー">コピー</button>
+              </div>
+            </div>
+            <div class="copy-block">
+              <label for="share-code">閲覧コード</label>
+              <div class="copy-row">
+                <input type="password" id="share-code" readonly autocomplete="off" spellcheck="false">
+                <button type="button" class="button secondary" id="copy-code" aria-label="閲覧コードをコピー">コピー</button>
+              </div>
+              <button type="button" class="text-button" id="show-code" aria-pressed="false">コードを表示</button>
+            </div>
+            <p class="muted">URLとコードを別々に一度ずつ渡します。次回からは、同じURLで最新の記録を開けます。</p>
+            <p class="muted history-note">GitHubの履歴には、暗号化した過去の版も残ります。</p>
+            <a class="button quiet icon-text" id="reader-preview" target="_blank" rel="noopener noreferrer">
+              <span>閲覧画面を開く</span><span aria-hidden="true">↗</span>
+            </a>
+          </div>
+          <p class="message" id="copy-message" role="status"></p>
+        </section>
+      </div>
+    </div>
+
+    <footer class="site-footer" id="site-footer" hidden></footer>
+  </main>
+
+  <dialog id="leave-dialog" class="panel dialog" aria-labelledby="leave-title" aria-describedby="leave-note">
+    <h2 id="leave-title">入力した記録をどうしますか？</h2>
+    <p class="muted" id="leave-note"></p>
+    <p class="message" id="leave-message" role="status"></p>
+    <div class="leave-actions">
+      <button type="button" class="button primary" id="save-and-leave">保存して移動</button>
+      <button type="button" class="button secondary" id="keep-editing" autofocus>入力に戻る</button>
+      <button type="button" class="text-button danger" id="discard-and-leave">変更を破棄して移動</button>
+    </div>
+  </dialog>
+
+  <dialog id="conflict-dialog" class="panel dialog" aria-labelledby="conflict-title">
+    <div class="panel-top">
+      <div><p class="overline">同期の確認</p><h2 id="conflict-title">残す記録を選ぶ</h2></div>
+      <button type="button" class="text-button" id="close-conflict">あとで</button>
+    </div>
+    <p class="muted">同じ日が別の端末でも更新されました。日付ごとに残す内容を選べます。</p>
+    <form id="conflict-form">
+      <div id="conflict-choices"></div>
+      <button type="submit" class="button primary full">選んだ記録を同期</button>
+    </form>
+  </dialog>
+
+  <template id="activity-template">
+    <details class="activity">
+      <summary class="activity-summary">
+        <span class="activity-title"></span><span class="activity-description"></span>
+        <span class="activity-duration"></span>
+        <svg class="activity-strip" viewBox="0 0 1440 6" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </summary>
+      <div class="activity-editor">
+        <div class="time-row">
+          <label class="field"><span>開始</span><input type="time" class="start-time" step="60"></label>
+          <span class="time-arrow" aria-hidden="true">→</span>
+          <label class="field"><span>終了</span><input type="time" class="end-time" step="60"></label>
+        </div>
+        <div class="activity-info">
+          <label class="field"><span>場所</span><input type="text" class="place" maxlength="60" placeholder="場所を入力"></label>
+          <label class="field"><span>したこと（時刻は任意）</span><input type="text" class="action" maxlength="160" placeholder="したことを入力"></label>
+        </div>
+        <button type="button" class="text-button danger remove-activity">この時間帯を削除</button>
+      </div>
+    </details>
+  </template>
+
+  <script>
+"use strict";
+
+const STORE = "vault";
+const SETTINGS_ID = "settings";
+const SETTINGS_CONTEXT = "hibi-vault-v1:settings";
+const MAX_ACTIVITIES = 16;
+const MIN_PASSPHRASE_LENGTH = 12;
+const encoder = new TextEncoder();
+const decoder = new TextDecoder("utf-8", { fatal: true });
+
+function encodeBytes(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+
+function decodeBytes(text) {
+  if (typeof text !== "string" || !/^[A-Za-z0-9_-]+$/.test(text)) {
+    throw new Error("Invalid encoded data");
+  }
+  const binary = atob(text.replaceAll("-", "+").replaceAll("_", "/"));
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function vaultKey(passphrase, salt) {
+  const material = await crypto.subtle.importKey("raw", encoder.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 600000, hash: "SHA-256" },
+    material, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+  );
+}
+
+function dayContext(date) {
+  return "hibi-vault-v1:" + date;
+}
+
+function seal(key, value, context) {
+  return sealBytes(key, encoder.encode(JSON.stringify(value)), context);
+}
+
+async function sealBytes(key, plaintext, context) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv, additionalData: encoder.encode(context) },
+    key, plaintext
+  ));
+  const bytes = new Uint8Array(iv.length + encrypted.length);
+  bytes.set(iv);
+  bytes.set(encrypted, iv.length);
+  return encodeBytes(bytes);
+}
+
+async function unseal(key, box, context) {
+  return JSON.parse(decoder.decode(await unsealBytes(key, box, context)));
+}
+
+async function unsealBytes(key, box, context) {
+  const bytes = decodeBytes(box);
+  if (bytes.length < 29) throw new Error("Invalid encrypted data");
+  const plaintext = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: bytes.subarray(0, 12), additionalData: encoder.encode(context) },
+    key, bytes.subarray(12)
+  );
+  return new Uint8Array(plaintext);
+}
+
+function openVault() {
+  // GitHub Pages projects on the same account can share an origin.
+  const path = new URL("./", location.href).pathname;
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("hibi-no-hitokoto-v1:" + path, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: "id" });
+    request.onsuccess = () => {
+      const database = request.result;
+      database.onversionchange = () => database.close();
+      resolve(database);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function readVault(database) {
+  return new Promise((resolve, reject) => {
+    const request = database.transaction(STORE).objectStore(STORE).getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+class RecordConflict extends Error {}
+
+function changeVault(database, id, oldBox, record, removeIds = []) {
+  // Compare and replace in one transaction so another tab cannot silently overwrite a day.
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(STORE, "readwrite");
+    const store = transaction.objectStore(STORE);
+    const current = store.get(id);
+    let conflict = false;
+    current.onsuccess = () => {
+      if (current.result?.box !== oldBox) {
+        conflict = true;
+        transaction.abort();
+        return;
+      }
+      if (record) store.put(record);
+      else store.delete(id);
+      for (const removeId of removeIds) store.delete(removeId);
+    };
+    transaction.oncomplete = () => resolve();
+    transaction.onabort = () => reject(conflict ? new RecordConflict() : transaction.error);
+  });
+}
+
+function validDate(value) {
+  if (typeof value !== "string" || !/^(?!0000)\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + "T12:00:00Z");
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function validTime(value) {
+  return typeof value === "string" && (value === "" || /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value));
+}
+
+function limitedText(value, limit) {
+  return typeof value === "string" && value.length <= limit;
+}
+
+function validActivity(activity) {
+  return activity && validTime(activity.start) && validTime(activity.end)
+    && limitedText(activity.place, 60) && limitedText(activity.action, 160)
+    && Boolean(activity.start || activity.end || activity.place || activity.action);
+}
+
+function validDay(day) {
+  return day && validDate(day.date)
+    && (day.mood === null || (Number.isInteger(day.mood) && day.mood >= 1 && day.mood <= 5))
+    && limitedText(day.note, 600)
+    && Array.isArray(day.activities) && day.activities.length <= MAX_ACTIVITIES
+    && day.activities.every(validActivity)
+    && (day.outside === undefined || day.outside === null || day.outside === "out" || day.outside === "home")
+    && Boolean(day.mood || day.note || day.activities.length || day.outside);
+}
+
+const STATE_ID = "journal-state-v2";
+const STATE_CONTEXT = "hibi-vault-v2:journal-state";
+
+function readItem(database, id) {
+  return new Promise((resolve, reject) => {
+    const request = database.transaction(STORE).objectStore(STORE).get(id);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function writeCache(database, id, record) {
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(STORE, "readwrite");
+    const store = transaction.objectStore(STORE);
+    if (record) store.put({ id, ...record });
+    else store.delete(id);
+    transaction.oncomplete = () => resolve();
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+function validRevision(rev) {
+  return typeof rev === "string" && /^[a-f0-9-]{36}$/.test(rev);
+}
+
+function validDays(days) {
+  return days && typeof days === "object" && !Array.isArray(days)
+    && Object.entries(days).every(([date, day]) => validDay(day) && day.date === date && validRevision(day.rev));
+}
+
+function dayWithoutRevision(day) {
+  if (!day) return null;
+  const { date, mood, note, activities } = day;
+  return { date, mood, note, activities, outside: day.outside ?? null };
+}
+
+function dayEquals(left, right) {
+  return left?.rev === right?.rev
+    || JSON.stringify(dayWithoutRevision(left)) === JSON.stringify(dayWithoutRevision(right));
+}
+
+async function loadOwnerState(database, key) {
+  const current = await readItem(database, STATE_ID);
+  if (current) {
+    const state = await unseal(key, current.box, STATE_CONTEXT);
+    if (state?.version !== 2 || !validDays(state.days) || !validConnection(state.cloud)) {
+      throw new Error("Invalid vault state");
+    }
+    return { state, box: current.box, skipped: false };
+  }
+
+  const old = (await readVault(database)).filter((record) => validDate(record.id));
+  const recovered = await Promise.allSettled(old.map(async (record) => {
+    const day = await unseal(key, record.box, dayContext(record.id));
+    if (!validDay(day) || day.date !== record.id) throw new Error("Invalid old record");
+    return { ...day, rev: crypto.randomUUID() };
+  }));
+  const days = Object.fromEntries(recovered.filter((result) => result.status === "fulfilled")
+    .map(({ value }) => [value.date, value]));
+  const state = { version: 2, days, cloud: null };
+  const box = await persistOwnerState(database, key, undefined, state, Object.keys(days));
+  return { state, box, skipped: recovered.some((result) => result.status === "rejected") };
+}
+
+async function persistOwnerState(database, key, oldBox, state, removeIds = []) {
+  const box = await seal(key, state, STATE_CONTEXT);
+  await changeVault(database, STATE_ID, oldBox, { id: STATE_ID, box }, removeIds);
+  return box;
+}
+
+const API = "https://api.github.com";
+const CLOUD_FILE = "hibi-journal.enc.json";
+const MAX_CLOUD_BYTES = 900000;
+const MAX_PLAINTEXT = 12000000;
+
+class GitHubError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
+class CloudConflict extends Error {
+  constructor(conflicts, local, remote) {
+    super("同じ日がこの端末とGitHubの両方で更新されました。");
+    this.conflicts = conflicts;
+    this.local = local;
+    this.remote = remote;
+  }
+}
+
+function canonicalRepo(value) {
+  const name = value.trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9-]{0,38}\/[a-z0-9_.-]{1,100}$/.test(name)
+    && !name.endsWith("/.") && !name.endsWith("/..") ? name : "";
+}
+
+function validCode(code) {
+  return typeof code === "string" && /^[A-Za-z0-9_-]{22}$/.test(code);
+}
+
+function validToken(token) {
+  return typeof token === "string" && /^github_pat_[A-Za-z0-9_]{20,250}$/.test(token);
+}
+
+function validTimestamp(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value)
+    && Number.isFinite(Date.parse(value));
+}
+
+function validConnection(cloud) {
+  return cloud === null || (cloud && typeof cloud.repo === "string" && cloud.repo
+    && canonicalRepo(cloud.repo) === cloud.repo && validCode(cloud.code) && validToken(cloud.token)
+    && (cloud.syncedAt === null || validTimestamp(cloud.syncedAt))
+    && cloud.base && typeof cloud.base === "object" && !Array.isArray(cloud.base)
+    && Object.entries(cloud.base).every(([date, rev]) => validDate(date) && validRevision(rev)));
+}
+
+function importCode(code, usages) {
+  if (!validCode(code)) throw new Error("閲覧コードを確認してください。");
+  return crypto.subtle.importKey("raw", decodeBytes(code), "AES-GCM", false, usages);
+}
+
+function generateCode() {
+  return encodeBytes(crypto.getRandomValues(new Uint8Array(16)));
+}
+
+function snapshotContext(repo, codec) {
+  return "hibi-github-v1:" + repo + ":" + codec;
+}
+
+async function readBounded(stream, limit) {
+  const reader = stream.getReader();
+  const chunks = [];
+  let length = 0;
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      length += chunk.value.length;
+      if (length > limit) {
+        await reader.cancel();
+        throw new Error("共有ファイルが大きすぎます。");
+      }
+      chunks.push(chunk.value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const output = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return output;
+}
+
+async function buildArchive(key, repo, snapshot) {
+  let bytes = encoder.encode(JSON.stringify(snapshot));
+  let codec = "json";
+  if (bytes.length > MAX_PLAINTEXT) throw new Error("共有ファイルが保存容量に達しました。記録は端末に保存されています。");
+  if (bytes.length > 1500 && typeof CompressionStream === "function") {
+    const compressed = await readBounded(new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip")), MAX_PLAINTEXT + 65536);
+    if (compressed.length < bytes.length) {
+      bytes = compressed;
+      codec = "gzip";
+    }
+  }
+  const box = await sealBytes(key, bytes, snapshotContext(repo, codec));
+  const text = JSON.stringify({ v: 1, codec, box });
+  if (text.length > MAX_CLOUD_BYTES) throw new Error("共有ファイルが保存容量に達しました。記録は端末に保存されています。");
+  return text;
+}
+
+async function openArchive(key, repo, text) {
+  if (typeof text !== "string" || text.length > MAX_CLOUD_BYTES) throw new Error("共有ファイルが大きすぎます。");
+  const envelope = JSON.parse(text);
+  if (envelope?.v !== 1 || !["gzip", "json"].includes(envelope.codec) || typeof envelope.box !== "string") {
+    throw new Error("共有ファイルの形式を確認してください。");
+  }
+  let bytes;
+  try {
+    bytes = await unsealBytes(key, envelope.box, snapshotContext(repo, envelope.codec));
+  } catch {
+    throw new Error("閲覧コードを確認してください。");
+  }
+  if (envelope.codec === "gzip") {
+    if (typeof DecompressionStream !== "function") {
+      throw new Error("ブラウザーを更新すると、この共有ファイルを開けます。");
+    }
+    bytes = await readBounded(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip")), MAX_PLAINTEXT);
+  }
+  const snapshot = JSON.parse(decoder.decode(bytes));
+  if (!validTimestamp(snapshot?.updatedAt) || !validDays(snapshot.days)) {
+    throw new Error("共有ファイルの形式を確認してください。");
+  }
+  return snapshot;
+}
+
+function repoPath(repo) {
+  return "/repos/" + repo.split("/").map(encodeURIComponent).join("/");
+}
+
+async function github(path, { token, method = "GET", body } = {}) {
+  const headers = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  if (token) headers.Authorization = "Bearer " + token;
+  if (body) headers["Content-Type"] = "application/json";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch(API + path, {
+      method, headers, credentials: "omit", redirect: "error", cache: "no-store",
+      body: body ? JSON.stringify(body) : undefined, signal: controller.signal
+    });
+    if (response.ok) return await response.json();
+    const { status } = response;
+    if (status === 429 || response.headers.get("X-RateLimit-Remaining") === "0" || response.headers.has("Retry-After")) {
+      throw new GitHubError(status, "GitHubへのアクセスが混み合っています。時間をおいて更新してください。");
+    }
+    const messages = {
+      401: "書き込みトークンの有効期限や入力内容を確認してください。",
+      403: "保存先とトークンの権限を確認してください。Contentsの読み取りと書き込みが必要です。",
+      404: "GitHubに共有ファイルが見つかりません。保存先と公開設定を確認してください。",
+      409: "GitHubで更新が重なりました。少しおいて再度お試しください。",
+      422: "GitHubに保存できませんでした。リポジトリの初期化とブランチの設定を確認してください。"
+    };
+    throw new GitHubError(status, messages[status] ?? "GitHubから応答を受け取れませんでした。時間をおいて再度お試しください。");
+  } catch (error) {
+    if (error instanceof GitHubError) throw error;
+    throw new Error("GitHubに接続できませんでした。通信を確認して再度お試しください。");
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function verifyRepo(repo, token) {
+  const details = await github(repoPath(repo), { token });
+  if (details.private !== false || (details.visibility && details.visibility !== "public")) {
+    throw new Error("専務が閲覧できるよう、公開の保存用リポジトリを選んでください。");
+  }
+  if (details.archived || details.disabled) throw new Error("書き込み可能なリポジトリを選んでください。");
+  if (details.full_name?.toLowerCase() !== repo) throw new Error("リポジトリ名を確認してください。");
+}
+
+async function readRemote(repo, token) {
+  try {
+    const result = await github(repoPath(repo) + "/contents/" + CLOUD_FILE, { token });
+    if (result.type !== "file" || result.encoding !== "base64" || typeof result.sha !== "string"
+      || typeof result.content !== "string" || result.size > MAX_CLOUD_BYTES
+      || result.content.length > 1300000) {
+      throw new Error("GitHub上の共有ファイルの形式を確認してください。");
+    }
+    const content = atob(result.content.replace(/\s/g, ""));
+    return { sha: result.sha, text: content };
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+function writeRemote(repo, token, text, previous) {
+  return github(repoPath(repo) + "/contents/" + CLOUD_FILE, {
+    token, method: "PUT",
+    body: { message: "Update encrypted journal", content: btoa(text), ...(previous ? { sha: previous.sha } : {}) }
+  });
+}
+
+function revisions(days) {
+  return Object.fromEntries(Object.entries(days).map(([date, day]) => [date, day.rev]));
+}
+
+function hasPending(state) {
+  const { cloud, days } = state;
+  if (!cloud) return false;
+  return cloud.syncedAt === null || Object.keys(days).length !== Object.keys(cloud.base).length
+    || Object.entries(days).some(([date, day]) => cloud.base[date] !== day.rev);
+}
+
+function mergeDays(local, remote, base, resolution) {
+  const merged = {};
+  const conflicts = [];
+  const dates = new Set([...Object.keys(local), ...Object.keys(remote)]);
+  for (const date of dates) {
+    const ours = local[date];
+    const theirs = remote[date];
+    const previous = base[date];
+    let record;
+    if (dayEquals(ours, theirs)) record = theirs;
+    else if (theirs?.rev === previous) record = ours;
+    else if (ours?.rev === previous) record = theirs;
+    else {
+      const decision = resolution?.[date];
+      if (decision && decision.local === ours?.rev && decision.remote === theirs?.rev) {
+        record = decision.choice === "local" ? ours : theirs;
+      } else {
+        conflicts.push(date);
+      }
+    }
+    if (record) merged[date] = record;
+  }
+  if (conflicts.length) throw new CloudConflict(conflicts.sort().reverse(), local, remote);
+  return merged;
+}
+
+async function syncRemote(state, resolution) {
+  const { cloud, days } = state;
+  const key = await importCode(cloud.code, ["encrypt", "decrypt"]);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const previous = await readRemote(cloud.repo, cloud.token);
+    if (!previous && cloud.syncedAt !== null) throw new Error("GitHubに共有ファイルが見つかりません。共有設定で保存先を確認してください。");
+    const remote = previous ? await openArchive(key, cloud.repo, previous.text) : { days: {}, updatedAt: null };
+    const merged = mergeDays(days, remote.days, cloud.base, resolution);
+    const base = revisions(merged);
+    const unchanged = previous && Object.keys(remote.days).length === Object.keys(merged).length
+      && Object.entries(merged).every(([date, day]) => remote.days[date]?.rev === day.rev);
+    if (unchanged) {
+      if (!hasPending(state) && cloud.syncedAt === remote.updatedAt) return state;
+      return { ...state, days: merged, cloud: { ...cloud, base, syncedAt: remote.updatedAt } };
+    }
+
+    const updatedAt = new Date().toISOString();
+    const text = await buildArchive(key, cloud.repo, { updatedAt, days: merged });
+    try {
+      await writeRemote(cloud.repo, cloud.token, text, previous);
+      return { ...state, days: merged, cloud: { ...cloud, base, syncedAt: updatedAt } };
+    } catch (error) {
+      if (attempt !== 0 || !(error instanceof GitHubError) || ![409, 422].includes(error.status)) throw error;
+    }
+  }
+}
+
+const $ = (id) => document.getElementById(id);
+const SVG_NS = "http://www.w3.org/2000/svg";
+const MOODS = [
+  { label: "とてもつらい", face: "#eadbd8", bar: "#ab746c", mouth: "M11 24q5-6 10 0" },
+  { label: "つらい", face: "#f0e1d6", bar: "#c48e6a", mouth: "M11 23q5-3 10 0" },
+  { label: "ふつう", face: "#eee9d8", bar: "#c6b48b", mouth: "M12 22h8" },
+  { label: "いい", face: "#e3ebd6", bar: "#9dad77", mouth: "M11 20q5 5 10 0" },
+  { label: "とてもいい", face: "#f4e2ad", bar: "#60865b", mouth: "M10 19h12q-6 11-12 0Z" }
+];
+
+const SHORT_DATE = new Intl.DateTimeFormat("ja-JP", { month: "long", day: "numeric", weekday: "short", timeZone: "UTC" });
+const LONG_DATE = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", weekday: "short", timeZone: "UTC" });
+const MONTH_FORMAT = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: "UTC" });
+const TIME_FORMAT = new Intl.DateTimeFormat("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+let displayedPanel = "main";
+let monthCursor;
+let selectedMonthDate;
+let selectedReaderDate;
+let readerLimit = 10;
+
+function isoToday() {
+  const date = new Date();
+  return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+    .map((part, index) => String(part).padStart(index ? 2 : 4, "0")).join("-");
+}
+
+function dateValue(date) {
+  return new Date(date + "T12:00:00Z");
+}
+
+function displayDay(date, long = false) {
+  return (long ? LONG_DATE : SHORT_DATE).format(dateValue(date));
+}
+
+function displayMonth(month) {
+  return MONTH_FORMAT.format(dateValue(month + "-01"));
+}
+
+function moveMonth(month, distance) {
+  const date = dateValue(month + "-01");
+  date.setUTCMonth(date.getUTCMonth() + distance);
+  const year = date.getUTCFullYear();
+  return year > 0 && year < 10000 ? date.toISOString().slice(0, 7) : month;
+}
+
+function datesNewest(days) {
+  return Object.keys(days).sort().reverse();
+}
+
+function node(tag, className, text) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text !== undefined) element.textContent = text;
+  return element;
+}
+
+function svgNode(tag, attributes) {
+  const element = document.createElementNS(SVG_NS, tag);
+  for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+  return element;
+}
+
+function face(value) {
+  const mood = MOODS[value - 1];
+  const svg = svgNode("svg", { viewBox: "0 0 32 32", class: "mood-face", "aria-hidden": "true" });
+  svg.append(
+    svgNode("circle", { cx: 16, cy: 16, r: 14, fill: mood.face, stroke: "#52634d", "stroke-width": 1.25 }),
+    svgNode("circle", { cx: 11.5, cy: 13, r: 1.25, fill: "#374a39" }),
+    svgNode("circle", { cx: 20.5, cy: 13, r: 1.25, fill: "#374a39" }),
+    svgNode("path", { d: mood.mouth, fill: "none", stroke: "#374a39", "stroke-width": 1.5, "stroke-linecap": "round", "stroke-linejoin": "round" })
+  );
+  return svg;
+}
+
+function button(label, className, onClick) {
+  const element = node("button", className, label);
+  element.type = "button";
+  element.addEventListener("click", onClick);
+  return element;
+}
+
+function status(id, text = "", error = false) {
+  const element = $(id);
+  element.textContent = text;
+  element.classList.toggle("error", error);
+}
+
+function systemStatus(text) {
+  $("system-message").textContent = text;
+  $("system-message").hidden = !text;
+}
+
+function syncPill(text, tone = "") {
+  $("sync-label").textContent = text;
+  $("sync-pill").dataset.tone = tone;
+}
+
+function setPanel(panel, focus = false) {
+  displayedPanel = panel;
+  $("editor-view").hidden = isReader || panel !== "main";
+  $("reader-view").hidden = !isReader || panel !== "main";
+  $("month-view").hidden = panel !== "month";
+  $("share-view").hidden = isReader || panel !== "share";
+  for (const name of ["main", "month", "share"]) {
+    const tab = $("nav-" + name);
+    if (name === panel) tab.setAttribute("aria-current", "page");
+    else tab.removeAttribute("aria-current");
+  }
+  if (panel === "month") renderMonth();
+  if (focus) {
+    const target = { main: isReader ? "reader-list-title" : "editor-title", month: "month-title", share: "connection-title" };
+    $(target[panel]).focus({ preventScroll: true });
+    $("journal").scrollIntoView({ block: "nearest" });
+  }
+}
+
+function resetCalendar(date) {
+  monthCursor = date.slice(0, 7);
+  selectedMonthDate = date;
+}
+
+function sortedActivities(activities) {
+  return [...activities].sort((left, right) => (left.start || left.end || "99:99").localeCompare(right.start || right.end || "99:99"));
+}
+
+function timeRange({ start, end }) {
+  if (!start && !end) return "";
+  if (!start) return "〜 " + end;
+  if (!end) return start + " 〜";
+  return start + " → " + (end < start ? "翌日 " : "") + end;
+}
+
+function activityColor(action) {
+  return { "仕事": "#52668a", "昼休み": "#a58155", "睡眠": "#8c7c9b", "外出": "#668775" }[action] ?? "#63748b";
+}
+
+function activityTimeline(activities) {
+  const list = node("ol", "timeline");
+  for (const activity of sortedActivities(activities)) {
+    const row = node("li");
+    const time = timeRange(activity);
+    if (time) row.append(node("p", "timeline-time", time));
+    if (activity.place) row.append(node("p", "timeline-place", activity.place));
+    if (activity.action) row.append(node("p", "timeline-action", activity.action));
+    list.append(row);
+  }
+  return list;
+}
+
+function renderDayCard(target, date, allowEdit) {
+  target.replaceChildren();
+  const day = visibleDays()[date];
+  const label = date ? displayDay(date, true) : "日記";
+  const heading = node("h2", "", label);
+  heading.tabIndex = -1;
+  target.append(node("p", "overline", "選んだ日の記録"), heading);
+  if (!day) {
+    target.append(node("p", "muted", date ? "この日の記録はありません。記録がない理由や体調は分かりません。" : "日記が保存されると、ここで読めます。"));
+  } else {
+    if (day.mood) {
+      const mood = node("div", "day-mood");
+      mood.append(face(day.mood), node("span", "", MOODS[day.mood - 1].label));
+      target.append(mood);
+    }
+    if (day.outside) {
+      target.append(node("p", "outside-detail", day.outside === "out" ? "外に出た" : "家で過ごした"));
+    }
+    if (day.note) {
+      const section = node("section", "day-section");
+      section.append(node("h3", "", "メモ"), node("p", "day-note", day.note));
+      target.append(section);
+    }
+    if (day.activities.length) {
+      const section = node("section", "day-section");
+      section.append(node("h3", "", "過ごした時間"), activityTimeline(day.activities));
+      target.append(section);
+    }
+  }
+  if (allowEdit && date) {
+    target.append(button(day ? "この日を編集" : "この日の記録を書く", "button secondary day-edit", () => {
+      if (chooseEditorDate(date)) setPanel("main", true);
+    }));
+  }
+  if (target.id === "reader-detail" && day) {
+    target.append(button("記録一覧へ", "text-button day-edit", () => {
+      $("reader-list-title").focus();
+    }));
+  }
+}
+
+function entryItem(day, selected, choose, compact = false) {
+  const row = node("li");
+  const time = node("time", "", displayDay(day.date, !compact));
+  time.dateTime = day.date;
+  const content = node("span", "entry-text");
+  content.append(time);
+  if (!compact) {
+    const teaser = day.note || (day.activities.length ? "時間帯 " + day.activities.length + "件" : (day.mood ? MOODS[day.mood - 1].label : day.outside === "out" ? "外に出た" : "家で過ごした"));
+    content.append(node("span", "entry-teaser", teaser));
+  }
+  const action = button("", "", choose);
+  action.append(content);
+  if (day.mood) {
+    action.append(face(day.mood));
+    action.setAttribute("aria-label", time.textContent + "、" + MOODS[day.mood - 1].label);
+  }
+  if (selected) action.setAttribute("aria-current", "date");
+  row.append(action);
+  return row;
+}
+
+function renderReaderOverview() {
+  $("reader-overview").hidden = Boolean(legacySnapshot);
+  if (legacySnapshot) return;
+  const days = visibleDays();
+  const today = isoToday();
+  const end = dateValue(today);
+  const dates = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(end);
+    date.setUTCDate(date.getUTCDate() - 6 + index);
+    return date.toISOString().slice(0, 10);
+  });
+  $("reader-window").textContent = displayDay(dates[0]) + "〜" + displayDay(today) + " · 直近7日";
+  const openDate = (date) => {
+    selectedReaderDate = date;
+    renderReaderLog();
+    $("reader-detail").querySelector("h2").focus();
+  };
+  $("reader-week").replaceChildren(...dates.map((date) => {
+    const day = days[date];
+    const item = button("", "recent-day", () => openDate(date));
+    const label = day?.mood ? MOODS[day.mood - 1].label : day ? "気分未記録" : "記録なし";
+    item.setAttribute("aria-label", displayDay(date) + "、" + label);
+    item.setAttribute("aria-pressed", String(selectedReaderDate === date));
+    item.append(node("span", "", date.slice(5).replace("-", "/")), day?.mood ? face(day.mood) : node("span", "recent-unrated", "—"), node("small", "", label));
+    return item;
+  }));
+  const entries = dates.slice().reverse().map((date) => days[date]).filter((day) => day && (day.note || day.activities.length || day.outside));
+  const rows = entries.slice(0, 3).map((day) => {
+    const item = button("", "life-entry", () => openDate(day.date));
+    const detail = [day.outside === "out" ? "外に出た" : day.outside === "home" ? "家で過ごした" : "",
+      ...sortedActivities(day.activities).map((a) => [timeRange(a), a.action, a.place].filter(Boolean).join(" ")), day.note].filter(Boolean).join(" · ");
+    item.append(node("strong", "", displayDay(day.date)), node("span", "", detail.length > 110 ? detail.slice(0, 110) + "…" : detail));
+    return item;
+  });
+  $("reader-life").replaceChildren(node("h3", "", "記録された過ごし方"), ...rows);
+  if (!rows.length) $("reader-life").append(node("p", "muted", "この7日間の生活の記録はありません。気分だけの記録も、上の顔から確認できます。"));
+}
+
+function renderReaderLog() {
+  const days = visibleDays();
+  const dates = datesNewest(days);
+  if (!validDate(selectedReaderDate)) selectedReaderDate = dates[0];
+  renderReaderOverview();
+  renderDayCard($("reader-detail"), selectedReaderDate, false);
+  const rows = dates.slice(0, readerLimit).map((date) => entryItem(days[date], date === selectedReaderDate, () => {
+    selectedReaderDate = date;
+    renderReaderLog();
+    $("reader-detail").querySelector("h2").focus();
+  }));
+  $("reader-list").replaceChildren(...rows);
+  $("reader-count").textContent = dates.length + "日分";
+  $("reader-empty").hidden = Boolean(dates.length);
+  $("reader-more").hidden = dates.length <= readerLimit;
+}
+
+function renderRecent() {
+  const days = visibleDays();
+  const rows = datesNewest(days).slice(0, 5).map((date) => entryItem(days[date], date === editDate, () => {
+    if (chooseEditorDate(date)) $("editor-title").focus();
+  }, true));
+  $("recent-list").replaceChildren(...rows);
+  $("recent-empty").hidden = Boolean(rows.length);
+}
+
+function monthCounts(days, month) {
+  const counts = [0, 0, 0, 0, 0];
+  let total = 0;
+  let moodTotal = 0;
+  let outsideOut = 0;
+  let outsideRated = 0;
+  for (const day of Object.values(days)) {
+    if (!day.date.startsWith(month)) continue;
+    total += 1;
+    if (day.mood) { counts[day.mood - 1] += 1; moodTotal += day.mood; }
+    if (day.outside === "out") { outsideOut += 1; outsideRated += 1; }
+    if (day.outside === "home") outsideRated += 1;
+  }
+  return { counts, total, rated: counts.reduce((sum, count) => sum + count, 0), moodTotal, outsideOut, outsideRated };
+}
+
+function calendarDateButton(date, day, selected, current) {
+  const action = button("", "calendar-day", () => selectCalendarDate(date, true));
+  action.dataset.date = date;
+  action.tabIndex = selected ? 0 : -1;
+  action.setAttribute("aria-pressed", String(selected));
+  if (current) action.setAttribute("aria-current", "date");
+  const details = day?.mood ? MOODS[day.mood - 1].label : day ? "記録あり" : "空欄";
+  action.setAttribute("aria-label", displayDay(date, true) + "、" + details);
+  action.append(node("span", "day-number", Number(date.slice(8))));
+  if (day) action.classList.add("has-entry");
+  if (day?.mood) action.append(face(day.mood));
+  else action.append(node("span", day ? "calendar-indicator" : "calendar-placeholder"));
+  return action;
+}
+
+function selectCalendarDate(date, focus = false) {
+  resetCalendar(date);
+  renderMonth();
+  if (focus) $("calendar-grid").querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+}
+
+function changeCalendarMonth(month) {
+  const days = visibleDays();
+  const current = isoToday();
+  const defaultDate = month === current.slice(0, 7) ? current : month + "-01";
+  selectCalendarDate(datesNewest(days).find((date) => date.startsWith(month)) ?? defaultDate);
+}
+
+function renderTrendRow(days, month) {
+  const { counts, rated, outsideOut, outsideRated } = monthCounts(days, month);
+  const action = button("", "trend-row", () => {
+    changeCalendarMonth(month);
+    $("trend-list").querySelector('[aria-pressed="true"]')?.focus();
+  });
+  action.setAttribute("aria-pressed", String(month === monthCursor));
+  const labels = counts.map((count, index) => MOODS[index].label + " " + count + "日");
+  action.setAttribute("aria-label", displayMonth(month) + "、" + labels.join("、") + "、外出 " + outsideOut + "日、外出の記録 " + outsideRated + "日");
+  const svg = svgNode("svg", { viewBox: "0 0 100 8", preserveAspectRatio: "none", "aria-hidden": "true" });
+  svg.append(svgNode("rect", { x: 0, y: 0, width: 100, height: 8, fill: "#e6e9df" }));
+  let offset = 0;
+  if (rated) {
+    for (const [index, count] of counts.entries()) {
+      const width = count / rated * 100;
+      if (width) svg.append(svgNode("rect", { x: offset, y: 0, width, height: 8, fill: MOODS[index].bar }));
+      offset += width;
+    }
+  }
+  action.append(node("span", "", displayMonth(month)), svg, node("span", "trend-count", "外出 " + outsideOut + "日 / 記録 " + outsideRated + "日"));
+  return action;
+}
+
+function renderMonth() {
+  const days = visibleDays();
+  const current = isoToday();
+  if (!monthCursor) resetCalendar(current);
+  const first = dateValue(monthCursor + "-01");
+  const last = new Date(first);
+  last.setUTCMonth(last.getUTCMonth() + 1, 0);
+  const cells = Array.from({ length: first.getUTCDay() }, () => {
+    const blank = node("span");
+    blank.setAttribute("aria-hidden", "true");
+    return blank;
+  });
+  for (let day = 1; day <= last.getUTCDate(); day += 1) {
+    const date = monthCursor + "-" + String(day).padStart(2, "0");
+    cells.push(calendarDateButton(date, days[date], selectedMonthDate === date, current === date));
+  }
+  $("calendar-grid").replaceChildren(...cells);
+  $("month-label").textContent = displayMonth(monthCursor);
+  $("previous-month").disabled = moveMonth(monthCursor, -1) === monthCursor;
+  $("next-month").disabled = moveMonth(monthCursor, 1) === monthCursor;
+  const { counts, total, rated, moodTotal, outsideOut, outsideRated } = monthCounts(days, monthCursor);
+  const metric = (label, value, detail) => {
+    const item = node("div", "review-metric");
+    item.append(node("span", "", label), node("strong", "", value), node("small", "", detail));
+    return item;
+  };
+  $("month-count").replaceChildren(
+    metric("記録", total + "日", monthCursor === current.slice(0, 7) ? "今月は途中です" : "この月の記録"),
+    metric("外に出た", outsideRated ? outsideOut + "日" : "—", "外出の記録 " + outsideRated + "日")
+  );
+  $("month-average").textContent = "気分平均 " + (rated ? (moodTotal / rated).toFixed(1) + "/5" : "—") + "（記録 " + rated + "日）。顔を1〜5に置き換えた目安で、回復度を表すものではありません。";
+  $("month-moods").replaceChildren(...counts.map((count, index) => {
+    const mood = node("div", "mood-stat");
+    const swatch = svgNode("svg", { class: "mood-swatch", viewBox: "0 0 24 4", "aria-hidden": "true" });
+    swatch.append(svgNode("rect", { width: 24, height: 4, rx: 2, fill: MOODS[index].bar }));
+    mood.append(face(index + 1), node("span", "", MOODS[index].label), node("strong", "", count + "日"), swatch);
+    return mood;
+  }));
+  renderDayCard($("month-detail"), selectedMonthDate, !isReader);
+  const firstMonday = new Date(first);
+  firstMonday.setUTCDate(1 - (first.getUTCDay() + 6) % 7);
+  const weeks = [];
+  while (firstMonday <= last) {
+    const end = new Date(firstMonday);
+    end.setUTCDate(end.getUTCDate() + 6);
+    const startDate = firstMonday.toISOString().slice(0, 10);
+    const endDate = end.toISOString().slice(0, 10);
+    if (startDate > current && !Object.keys(days).some((date) => date >= startDate && date <= endDate)) { firstMonday.setUTCDate(firstMonday.getUTCDate() + 7); continue; }
+    const records = Object.values(days).filter((day) => day.date >= startDate && day.date <= endDate);
+    const ratedDays = records.filter((day) => day.mood);
+    const outsideDays = records.filter((day) => day.outside === "out");
+    const outsideKnown = records.filter((day) => day.outside === "out" || day.outside === "home");
+    const row = node("div", "week-row");
+    row.append(node("strong", "", startDate.slice(5).replace("-", "/") + "〜" + endDate.slice(5).replace("-", "/")));
+    const average = ratedDays.length
+      ? ratedDays.reduce((sum, day) => sum + day.mood, 0) / ratedDays.length
+      : null;
+    if (startDate <= current && endDate >= current) row.append(node("span", "week-progress", "今週・途中"));
+    const strip = node("div", "week-days");
+    for (let index = 0; index < 7; index += 1) {
+      const value = new Date(firstMonday);
+      value.setUTCDate(value.getUTCDate() + index);
+      const date = value.toISOString().slice(0, 10);
+      const day = days[date];
+      const cell = button("", "week-day", () => selectCalendarDate(date, true));
+      const outside = day?.outside === "out" ? "外出" : day?.outside === "home" ? "在宅" : "—";
+      cell.setAttribute("aria-label", displayDay(date) + "、気分 " + (day?.mood ? MOODS[day.mood - 1].label : "未記録") + "、外出 " + (outside === "—" ? "未記録" : outside));
+      cell.append(node("span", "", ["月", "火", "水", "木", "金", "土", "日"][index]));
+      cell.append(day?.mood ? face(day.mood) : node("span", "week-unrated", "—"));
+      cell.append(node("small", "", outside));
+      strip.append(cell);
+    }
+    row.append(strip, node("p", "", "外出 " + (outsideKnown.length ? outsideDays.length + "日" : "—") + "（外出の記録 " + outsideKnown.length + "日）"));
+    const numbers = node("details", "week-numbers");
+    numbers.append(node("summary", "", "気分の数値を見る"), node("p", "", "気分平均 " + (average !== null ? average.toFixed(1) + "/5" : "—") + "（気分の記録 " + ratedDays.length + "日）。回復度ではありません。"));
+    row.append(numbers);
+    weeks.push(row);
+    firstMonday.setUTCDate(firstMonday.getUTCDate() + 7);
+  }
+  $("week-list").replaceChildren(...weeks);
+  const months = [...new Set(Array.from({ length: 6 }, (_, index) => moveMonth(monthCursor, index - 5)))];
+  $("trend-list").replaceChildren(...months.map((month) => renderTrendRow(days, month)));
+}
+
+function bindViews() {
+  $("nav-main").addEventListener("click", () => setPanel("main"));
+  $("nav-month").addEventListener("click", () => setPanel("month"));
+  $("nav-share").addEventListener("click", () => setPanel("share"));
+  $("previous-month").addEventListener("click", () => changeCalendarMonth(moveMonth(monthCursor, -1)));
+  $("next-month").addEventListener("click", () => changeCalendarMonth(moveMonth(monthCursor, 1)));
+  $("current-month").addEventListener("click", () => selectCalendarDate(isoToday()));
+  $("reader-more").addEventListener("click", () => {
+    const index = readerLimit;
+    readerLimit += 10;
+    renderReaderLog();
+    $("reader-list").children[index]?.querySelector("button")?.focus();
+  });
+  $("calendar-grid").addEventListener("keydown", (event) => {
+    const distance = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[event.key];
+    if (!distance || !event.target.dataset.date) return;
+    event.preventDefault();
+    const next = dateValue(event.target.dataset.date);
+    next.setUTCDate(next.getUTCDate() + distance);
+    const date = next.toISOString().slice(0, 10);
+    if (validDate(date)) selectCalendarDate(date, true);
+  });
+}
+
+let refreshTimePresets = () => {};
+
+function bindTimePicker() {
+  let action = "仕事";
+  let drag = null;
+  const startInput = $("quick-start");
+  const endInput = $("quick-end");
+  const tracks = [$("paint-am"), $("paint-pm")];
+  const minute = (text) => Number(text.slice(0, 2)) * 60 + Number(text.slice(3));
+  const clock = (value) => String(Math.floor(value / 60) % 24).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0");
+
+  function paint() {
+    const start = minute(startInput.value);
+    const finish = minute(endInput.value);
+    const valid = validTime(startInput.value) && startInput.value && validTime(endInput.value) && endInput.value && start !== finish;
+    const ranges = valid ? (finish < start ? [[0, finish], [start, 1440]] : [[start, finish]]) : [];
+    for (const [index, id] of ["selection-am", "selection-pm"].entries()) {
+      const offset = index * 720;
+      const rectangles = ranges.filter(([left, right]) => right > offset && left < offset + 720)
+        .map(([left, right]) => svgNode("rect", {
+          class: "time-selection", color: activityColor(action), x: Math.max(left, offset) - offset, y: 2,
+          width: Math.min(right, offset + 720) - Math.max(left, offset), height: 40, rx: 6
+        }));
+      $(id).replaceChildren(...rectangles);
+    }
+    const duration = (finish - start + 1440) % 1440;
+    const durationLabel = (Math.floor(duration / 60) ? Math.floor(duration / 60) + "時間" : "") + (duration % 60 ? duration % 60 + "分" : "");
+    $("quick-preview").textContent = valid
+      ? action + "　" + timeRange({ start: startInput.value, end: endInput.value }) + "（" + durationLabel + "）"
+      : "開始と終了に、異なる時刻を選んでください。";
+    $("add-selected-time").disabled = !valid;
+  }
+
+  refreshTimePresets = () => {
+    const previous = datesNewest(ownerState?.days ?? {}).filter((date) => date <= editDate);
+    for (const preset of $("time-presets").querySelectorAll("button")) {
+      const saved = previous.flatMap((date) => ownerState.days[date].activities)
+        .find((item) => item.action === preset.dataset.action && item.start && item.end && item.start !== item.end);
+      if (!preset.dataset.defaultStart) {
+        preset.dataset.defaultStart = preset.dataset.start;
+        preset.dataset.defaultEnd = preset.dataset.end;
+      }
+      preset.dataset.start = saved?.start ?? preset.dataset.defaultStart;
+      preset.dataset.end = saved?.end ?? preset.dataset.defaultEnd;
+      preset.dataset.reused = String(Boolean(saved));
+      if (preset.dataset.action === action) {
+        startInput.value = preset.dataset.start;
+        endInput.value = preset.dataset.end;
+        $("preset-hint").textContent = saved ? "前回の時間です。帯をなぞるか、時刻をタップして変更できます。" : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
+      }
+    }
+    paint();
+  };
+
+  for (const preset of $("time-presets").querySelectorAll("button")) {
+    preset.addEventListener("click", () => {
+      action = preset.dataset.action;
+      $("preset-hint").textContent = preset.dataset.reused === "true" ? "前回の時間です。帯をなぞるか、時刻をタップして変更できます。" : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
+      startInput.value = preset.dataset.start;
+      endInput.value = preset.dataset.end;
+      for (const item of $("time-presets").querySelectorAll("button")) {
+        item.setAttribute("aria-pressed", String(item === preset));
+      }
+      paint();
+    });
+  }
+
+  function position(event) {
+    const rectangles = tracks.map((track) => track.getBoundingClientRect());
+    const middle = (rectangles[0].bottom + rectangles[1].top) / 2;
+    const index = event.clientY >= middle ? 1 : 0;
+    const rect = rectangles[index];
+    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    return index * 720 + Math.min(705, Math.floor(fraction * 48) * 15);
+  }
+
+  const surface = $("time-paint");
+  surface.addEventListener("pointerdown", (event) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    const anchor = position(event);
+    drag = { pointer: event.pointerId, anchor, start: startInput.value, end: endInput.value };
+    surface.setPointerCapture(event.pointerId);
+    startInput.value = clock(anchor);
+    endInput.value = clock(anchor + 15);
+    paint();
+  });
+  surface.addEventListener("pointermove", (event) => {
+    if (!drag || drag.pointer !== event.pointerId) return;
+    const current = position(event);
+    startInput.value = clock(Math.min(current, drag.anchor));
+    endInput.value = clock(Math.max(current, drag.anchor) + 15);
+    paint();
+  });
+  surface.addEventListener("pointerup", (event) => {
+    if (!drag || drag.pointer !== event.pointerId) return;
+    drag = null;
+    surface.releasePointerCapture(event.pointerId);
+  });
+  surface.addEventListener("pointercancel", () => {
+    if (drag) {
+      startInput.value = drag.start;
+      endInput.value = drag.end;
+      drag = null;
+      paint();
+    }
+  });
+  surface.addEventListener("lostpointercapture", () => { drag = null; });
+  startInput.addEventListener("input", paint);
+  endInput.addEventListener("input", paint);
+  $("add-selected-time").addEventListener("click", () => {
+    if (working === "save") return;
+    const existing = [...$("activity-list").children].find((row) =>
+      row.querySelector(".start-time").value === startInput.value
+      && row.querySelector(".end-time").value === endInput.value
+      && row.querySelector(".action").value === action);
+    if (existing) {
+      existing.querySelector("summary").focus();
+      status("save-message", "同じ時間帯が追加されています。");
+      return;
+    }
+    if ($("activity-list").children.length >= MAX_ACTIVITIES) {
+      status("save-message", "時間帯は1日16件まで追加できます。", true);
+      return;
+    }
+    addActivity({ start: startInput.value, end: endInput.value, place: "", action });
+    if (action === "外出") {
+      for (const radio of $("outside-options").querySelectorAll("input")) radio.checked = radio.value === "out";
+      queueQuickSave("outside", "out");
+    }
+    renumberActivities();
+    refreshEditorControls();
+    status("save-message", action + "を追加しました。「記録を保存」で保存できます。");
+  });
+  paint();
+}
+
+let ownerDatabase;
+let ownerKey;
+let ownerState;
+let ownerBox;
+let creatingOwner = false;
+let editDate;
+let loadedDay;
+let working = "";
+let syncIssue = "";
+let currentConflict;
+let removedActivity;
+let pendingEditorDate;
+let pendingQuickSave;
+let quickSaveTimer;
+let quickSaveError = "";
+
+function visibleDays() {
+  return isReader ? readerSnapshot?.days ?? {} : ownerState?.days ?? {};
+}
+
+function showOwnerGate(settings) {
+  creatingOwner = !settings;
+  $("gate-title").textContent = creatingOwner ? "自分の日記をつくる" : "日記を開く";
+  $("gate-note").textContent = creatingOwner
+    ? "編集画面を開く合言葉を、12文字以上で決めてください。"
+    : "自分用の合言葉で、この端末の日記を開きます。";
+  $("confirm-field").hidden = !creatingOwner;
+  $("confirm-passphrase").required = creatingOwner;
+  $("passphrase").minLength = creatingOwner ? MIN_PASSPHRASE_LENGTH : 1;
+  $("passphrase").autocomplete = creatingOwner ? "new-password" : "current-password";
+  $("open-owner").textContent = creatingOwner ? "合言葉を設定してはじめる" : "日記を開く";
+  $("owner-gate").hidden = false;
+}
+
+async function unlockOwner(event) {
+  event.preventDefault();
+  const submit = $("open-owner");
+  if (submit.disabled) return;
+  const passphrase = $("passphrase").value;
+  if (creatingOwner && (passphrase.length < MIN_PASSPHRASE_LENGTH || !passphrase.trim())) {
+    status("owner-gate-message", "12文字以上の合言葉を入力してください。", true);
+    return;
+  }
+  if (creatingOwner && $("confirm-passphrase").value !== passphrase) {
+    status("owner-gate-message", "同じ合言葉を2回入力してください。", true);
+    return;
+  }
+  submit.disabled = true;
+  status("owner-gate-message", "日記を開いています…");
+  try {
+    let settings = await readItem(ownerDatabase, SETTINGS_ID);
+    if (creatingOwner && settings) {
+      showOwnerGate(settings);
+      status("owner-gate-message", "別の画面で設定した合言葉を入力してください。", true);
+      return;
+    }
+    let key;
+    if (settings) {
+      key = await vaultKey(passphrase, decodeBytes(settings.salt));
+      try {
+        if (await unseal(key, settings.box, SETTINGS_CONTEXT) !== "ready") throw new Error();
+      } catch {
+        status("owner-gate-message", "合言葉を確認して、もう一度お試しください。", true);
+        return;
+      }
+    } else {
+      if (!creatingOwner) throw new Error("Missing settings");
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      key = await vaultKey(passphrase, salt);
+      const box = await seal(key, "ready", SETTINGS_CONTEXT);
+      settings = { id: SETTINGS_ID, salt: encodeBytes(salt), box };
+      await changeVault(ownerDatabase, SETTINGS_ID, undefined, settings);
+    }
+
+    let loaded;
+    try {
+      loaded = await loadOwnerState(ownerDatabase, key);
+    } catch (error) {
+      if (!(error instanceof RecordConflict)) throw error;
+      loaded = await loadOwnerState(ownerDatabase, key);
+    }
+    ownerKey = key;
+    ownerState = loaded.state;
+    ownerBox = loaded.box;
+    $("owner-gate-form").reset();
+    $("owner-gate").hidden = true;
+    $("journal").hidden = false;
+    $("lock").hidden = false;
+    $("hero-label").textContent = displayDay(isoToday(), true);
+    $("site-footer").textContent = "日記はこの端末に暗号化して保存されます。GitHubをつなぐと、端末を替えても記録を開けます。";
+    $("site-footer").hidden = false;
+    editDate = isoToday();
+    resetCalendar(editDate);
+    fillEditor(editDate);
+    renderRecent();
+    setPanel("main");
+    renderOwnerConnection();
+    $("editor-title").focus({ preventScroll: true });
+    if (loaded.skipped) status("top-message", "以前の記録の一部を読み込めませんでした。", true);
+    if (ownerState.cloud) void synchronize({ quiet: true });
+  } catch (error) {
+    if (error instanceof RecordConflict) {
+      showOwnerGate(true);
+      status("owner-gate-message", "別の画面で設定した合言葉を入力してください。", true);
+    } else {
+      status("owner-gate-message", "日記を開けませんでした。ブラウザーの保存設定を確認してください。", true);
+    }
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+function editorDraft() {
+  const mood = $("mood-options").querySelector("input:checked");
+  const activities = Array.from($("activity-list").children, (row) => ({
+    start: row.querySelector(".start-time").value,
+    end: row.querySelector(".end-time").value,
+    place: row.querySelector(".place").value.trim(),
+    action: row.querySelector(".action").value.trim()
+  })).filter((activity) => Object.values(activity).some(Boolean));
+  return { date: editDate, mood: mood ? Number(mood.value) : null, note: $("note").value.trim(), activities,
+    outside: $("outside-options").querySelector("input:checked")?.value ?? null };
+}
+
+function editorDirty() {
+  const original = dayWithoutRevision(loadedDay) ?? { date: editDate, mood: null, note: "", activities: [], outside: null };
+  return JSON.stringify(original) !== JSON.stringify(editorDraft());
+}
+
+// Quick choices commit only their own fields; unfinished notes and activities remain drafts.
+function cancelQuickSave() {
+  clearTimeout(quickSaveTimer);
+  pendingQuickSave = undefined;
+}
+
+function queueQuickSave(field, value) {
+  if (!ownerKey) return;
+  if (!pendingQuickSave || pendingQuickSave.date !== editDate) pendingQuickSave = { date: editDate, patch: {} };
+  pendingQuickSave.patch[field] = value;
+  quickSaveError = "";
+  clearTimeout(quickSaveTimer);
+  quickSaveTimer = setTimeout(() => void flushQuickSave(), 300);
+  refreshEditorControls();
+}
+
+async function flushQuickSave() {
+  if (!pendingQuickSave || !ownerKey || working) return false;
+  const request = pendingQuickSave;
+  pendingQuickSave = undefined;
+  if (request.date !== editDate) return false;
+  const current = ownerState.days[editDate];
+  if (!dayEquals(loadedDay, current)) {
+    quickSaveError = "選択は未保存です";
+    status("save-message", "別の端末で更新されています。選択は未保存です。内容を確認して保存してください。", true);
+    refreshEditorControls();
+    return false;
+  }
+  const nextDay = { ...(dayWithoutRevision(current) ?? { date: editDate, mood: null, outside: null, note: "", activities: [] }), ...request.patch };
+  try {
+    const done = await runOwnerOperation("save", async () => {
+      const record = validDay(nextDay) ? { ...nextDay, rev: crypto.randomUUID() } : undefined;
+      const days = { ...ownerState.days };
+      if (record) days[request.date] = record;
+      else delete days[request.date];
+      const next = { ...ownerState, days };
+      const box = await persistOwnerState(ownerDatabase, ownerKey, ownerBox, next);
+      ownerState = next;
+      ownerBox = box;
+      loadedDay = record;
+      quickSaveError = "";
+      renderRecent();
+      if (displayedPanel === "month") renderMonth();
+      status("save-message", editorDirty() ? "選択を保存しました。入力中の時間・メモはまだ保存していません。" : "選択を保存しました。");
+    });
+    if (done && ownerState.cloud) void synchronize({ fromEditor: true });
+    return Boolean(done);
+  } catch (error) {
+    quickSaveError = "保存できませんでした";
+    refreshEditorControls();
+    status("save-message", ownerError(error) + " 選択は残っています。保存ボタンから再試行できます。", true);
+    return false;
+  }
+}
+
+function populateMoodOptions() {
+  const options = MOODS.map((mood, index) => {
+    const label = node("label", "mood-choice");
+    const radio = node("input");
+    radio.type = "radio";
+    radio.name = "mood";
+    radio.value = index + 1;
+    radio.addEventListener("change", () => { if (radio.checked) queueQuickSave("mood", Number(radio.value)); });
+    label.append(radio, face(index + 1), node("span", "", mood.label));
+    return label;
+  });
+  $("mood-options").replaceChildren(...options);
+}
+
+function renderActivitySummary(row) {
+  const start = row.querySelector(".start-time").value;
+  const end = row.querySelector(".end-time").value;
+  const action = row.querySelector(".action").value.trim();
+  const place = row.querySelector(".place").value.trim();
+  row.querySelector(".activity-title").textContent = timeRange({ start, end }) || "時刻なし";
+  row.querySelector(".activity-description").textContent = [action || "内容を入力", place].filter(Boolean).join(" · ");
+  const strip = row.querySelector(".activity-strip");
+  strip.replaceChildren(svgNode("rect", { width: 1440, height: 6, fill: "#e6e5e0" }));
+  let duration = "";
+  if (start && end && start !== end) {
+    const from = Number(start.slice(0, 2)) * 60 + Number(start.slice(3));
+    const to = Number(end.slice(0, 2)) * 60 + Number(end.slice(3));
+    const minutes = (to - from + 1440) % 1440;
+    duration = (Math.floor(minutes / 60) ? Math.floor(minutes / 60) + "時間" : "") + (minutes % 60 ? minutes % 60 + "分" : "");
+    const segments = to < from ? [[from, 1440], [0, to]] : [[from, to]];
+    for (const [left, right] of segments) strip.append(svgNode("rect", { x: left, width: right - left, height: 6, fill: activityColor(action) }));
+  }
+  row.querySelector(".activity-duration").textContent = duration;
+}
+
+function renumberActivities() {
+  const rows = [...$("activity-list").children];
+  for (const [index, row] of rows.entries()) {
+    row.querySelector(".remove-activity").setAttribute("aria-label", "時間帯 " + (index + 1) + "を削除");
+    renderActivitySummary(row);
+  }
+  $("time-empty").hidden = rows.length > 0;
+  $("add-activity").disabled = rows.length >= MAX_ACTIVITIES;
+  $("undo-activity").disabled = rows.length >= MAX_ACTIVITIES;
+}
+
+function addActivity(activity = {}, focus = false) {
+  const row = $("activity-template").content.firstElementChild.cloneNode(true);
+  row.open = focus;
+  row.querySelector(".start-time").value = activity.start ?? "";
+  row.querySelector(".end-time").value = activity.end ?? "";
+  row.querySelector(".place").value = activity.place ?? "";
+  row.querySelector(".action").value = activity.action ?? "";
+  row.addEventListener("input", () => renderActivitySummary(row));
+  row.querySelector(".remove-activity").addEventListener("click", () => {
+    removedActivity = { row, index: [...$("activity-list").children].indexOf(row), date: editDate };
+    row.remove();
+    renumberActivities();
+    refreshEditorControls();
+    $("activity-notice").textContent = "時間帯を削除しました。";
+    $("undo-activity").hidden = false;
+    $("undo-activity").focus();
+  });
+  if (focus) for (const existing of $("activity-list").children) existing.open = false;
+  $("activity-list").append(row);
+  renderActivitySummary(row);
+  if (focus) row.querySelector(".action").focus();
+}
+
+function refreshEditorControls() {
+  const dirty = Boolean(ownerKey && editorDirty());
+  $("save-state").textContent = working === "save" ? "保存中…" : quickSaveError ? quickSaveError : pendingQuickSave ? "選択を保存しています…" : dirty ? "未保存の変更"
+    : !loadedDay ? "残せる項目だけで大丈夫です"
+    : ownerState?.cloud && !hasPending(ownerState) ? "共有済み" : "端末に保存済み";
+  $("save-label").textContent = working === "save" ? "保存中…" : "記録を保存";
+  const note = $("note");
+  $("note-count").textContent = note.value.length + " / " + note.maxLength + "文字";
+  $("clear-outside").hidden = !$("outside-options").querySelector("input:checked");
+  $("clear-mood").hidden = !$("mood-options").querySelector("input:checked");
+  $("delete-entry").hidden = !ownerState?.days[editDate];
+  $("day-tools").hidden = !ownerState?.days[editDate];
+  $("editor-fields").disabled = working === "save";
+  $("save-entry").disabled = Boolean(working) || !dirty;
+  $("delete-entry").disabled = Boolean(working);
+  $("entry-date").disabled = working === "save";
+}
+
+function fillEditor(date) {
+  cancelQuickSave();
+  quickSaveError = "";
+  editDate = date;
+  removedActivity = undefined;
+  $("undo-activity").hidden = true;
+  $("activity-notice").textContent = "";
+  loadedDay = ownerState?.days[date];
+  $("editor-kicker").textContent = date === isoToday() ? "今日の記録" : "日付を選んで記録";
+  $("editor-title").textContent = displayDay(date);
+  $("entry-date").value = date;
+  $("note").value = loadedDay?.note ?? "";
+  $("memo-details").open = Boolean(loadedDay?.note);
+  $("memo-label").textContent = loadedDay?.note ? "メモ" : "メモを追加";
+  $("time-composer").open = false;
+  refreshTimePresets();
+  $("day-tools").open = false;
+  for (const radio of $("mood-options").querySelectorAll("input")) radio.checked = Number(radio.value) === loadedDay?.mood;
+  for (const radio of $("outside-options").querySelectorAll("input")) radio.checked = radio.value === loadedDay?.outside;
+  $("activity-list").replaceChildren();
+  for (const activity of loadedDay?.activities ?? []) addActivity(activity);
+  renumberActivities();
+  refreshEditorControls();
+}
+
+function chooseEditorDate(date) {
+  if (!validDate(date) || working === "save") return false;
+  if (date === editDate) return true;
+  if (editorDirty()) {
+    pendingEditorDate = date;
+    $("leave-note").textContent = displayDay(editDate) + "の変更が未保存です。" + displayDay(date) + "へ移動します。";
+    status("leave-message");
+    $("leave-dialog").showModal();
+    return false;
+  }
+  fillEditor(date);
+  renderRecent();
+  resetCalendar(date);
+  status("save-message");
+  return true;
+}
+
+function readerUrl(repo) {
+  const url = new URL(location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("view", "1");
+  url.searchParams.set("repo", repo);
+  return url.href;
+}
+
+function renderOwnerConnection() {
+  const cloud = ownerState?.cloud;
+  const pending = ownerState && hasPending(ownerState);
+  const shareReady = Boolean(cloud?.syncedAt);
+  $("connect-setup").hidden = Boolean(cloud);
+  $("connected").hidden = !cloud;
+  $("share-fields").hidden = !shareReady;
+  $("connected-repo").textContent = cloud?.repo ?? "";
+  $("last-synced").textContent = shareReady
+    ? "最終同期 " + TIME_FORMAT.format(new Date(cloud.syncedAt))
+    : "初回同期を待っています。";
+  const url = shareReady ? readerUrl(cloud.repo) : "";
+  $("share-link").value = url;
+  $("share-code").value = shareReady ? cloud.code : "";
+  if (url) $("reader-preview").href = url;
+  else $("reader-preview").removeAttribute("href");
+  $("share-intro").textContent = !shareReady
+    ? "GitHubへの初回同期が完了すると、固定の閲覧URLとコードを渡せます。"
+    : pending
+      ? "全日分を共有します。端末の変更は、次の同期で閲覧画面に反映されます。"
+      : "全日分の記録を、同じURLで読み返せます。";
+  $("editor-sync-title").textContent = cloud ? "GitHubとつながっています" : "この端末の日記";
+  $("editor-sync-note").textContent = cloud
+    ? pending ? "端末の変更は、同期すると専務にも表示されます。" : "同期した全日分を、専務が閲覧できます。"
+    : "GitHubをつなぐと、全日分を専務と共有できます。";
+  $("connect").disabled = Boolean(working) || location.protocol !== "https:";
+  for (const id of ["sync-now", "update-token", "disconnect", "lock"]) $(id).disabled = Boolean(working);
+  refreshEditorControls();
+  if (["sync", "connect", "token"].includes(working)) syncPill("同期中", "wait");
+  else if (syncIssue) syncPill("同期を確認", "error");
+  else if (pending) syncPill("同期を待っています", "wait");
+  else syncPill(cloud ? "GitHubに同期済み" : "端末に保存");
+}
+
+function resetShareSecrets() {
+  $("share-code").type = "password";
+  $("show-code").textContent = "コードを表示";
+  $("show-code").setAttribute("aria-pressed", "false");
+  status("copy-message");
+}
+
+async function persistState(next, replaceDraft = false) {
+  if (next === ownerState) return;
+  const box = await persistOwnerState(ownerDatabase, ownerKey, ownerBox, next);
+  const preserve = !replaceDraft && editorDirty();
+  ownerState = next;
+  ownerBox = box;
+  if (!preserve && (replaceDraft || !dayEquals(loadedDay, next.days[editDate]))) fillEditor(editDate);
+  else if (!preserve) loadedDay = next.days[editDate];
+  else if (!dayEquals(loadedDay, next.days[editDate])) {
+    status("save-message", "この日の記録が別の端末で更新されました。入力中の内容は残しています。", true);
+  }
+  renderRecent();
+  if (displayedPanel === "month") renderMonth();
+  renderOwnerConnection();
+}
+
+async function runOwnerOperation(kind, action) {
+  if (working || !ownerKey) return false;
+  working = kind;
+  renderOwnerConnection();
+  const run = async () => {
+    const current = await readItem(ownerDatabase, STATE_ID);
+    if (current?.box !== ownerBox) throw new RecordConflict();
+    await action();
+    return true;
+  };
+  try {
+    if (navigator.locks?.request) {
+      const lockName = "hibi-no-hitokoto:" + new URL("./", location.href).pathname;
+      return await navigator.locks.request(lockName, { ifAvailable: true }, (lock) => {
+        if (!lock) throw new RecordConflict();
+        return run();
+      });
+    }
+    return await run();
+  } finally {
+    working = "";
+    if (ownerKey) renderOwnerConnection();
+    if (pendingQuickSave && ownerKey) quickSaveTimer = setTimeout(() => void flushQuickSave(), 0);
+  }
+}
+
+function ownerError(error) {
+  return error instanceof RecordConflict
+    ? "別の画面で日記を更新中か、更新がありました。この画面を開き直して最新の記録を確認してください。"
+    : "端末に保存できませんでした。ブラウザーの保存設定を確認してください。";
+}
+
+async function saveEntry(event, syncAfter = true) {
+  event.preventDefault();
+  if (!ownerKey || working) return false;
+  if (!editorDirty()) return true;
+  const draft = editorDraft();
+  if (!validDay(draft)) {
+    status("save-message", "気分、外出、メモ、過ごした時間のどれかを記録してください。", true);
+    return;
+  }
+  const current = ownerState.days[draft.date];
+  if (!dayEquals(loadedDay, current) && !window.confirm("別の端末で更新された記録を、入力中の内容に置き換えますか？")) return;
+  const record = { ...draft, rev: crypto.randomUUID() };
+  try {
+    const done = await runOwnerOperation("save", async () => {
+      const days = { ...ownerState.days, [draft.date]: record };
+      await persistState({ ...ownerState, days }, true);
+      status("save-message", ownerState.cloud ? "端末に保存しました。GitHubと同期します。" : "この日の記録を保存しました。");
+    });
+    if (done && syncAfter && ownerState.cloud) void synchronize({ fromEditor: true });
+    return Boolean(done);
+  } catch (error) {
+    status("save-message", ownerError(error), true);
+  }
+}
+
+async function deleteEntry() {
+  if (!ownerKey || working || !ownerState.days[editDate]) return;
+  const date = editDate;
+  if (!window.confirm(displayDay(date) + "の記録を削除しますか？ 同期すると閲覧画面にも反映されます。")) return;
+  try {
+    const done = await runOwnerOperation("save", async () => {
+      const days = { ...ownerState.days };
+      delete days[date];
+      await persistState({ ...ownerState, days }, true);
+      status("save-message", "この日の記録を削除しました。");
+    });
+    if (done && ownerState.cloud) void synchronize({ fromEditor: true });
+  } catch (error) {
+    status("save-message", ownerError(error), true);
+  }
+}
+
+function conflictDescription(day) {
+  if (!day) return "この日の記録を削除";
+  const mood = day.mood ? "気分 " + MOODS[day.mood - 1].label : "";
+  const times = sortedActivities(day.activities).map((activity) => [timeRange(activity), activity.place, activity.action].filter(Boolean).join("　"));
+  const outside = day.outside === "out" ? "外に出た" : day.outside === "home" ? "家で過ごした" : "";
+  return [mood, outside, day.note, ...times].filter(Boolean).join("\n");
+}
+
+function showConflict(conflict) {
+  currentConflict = conflict;
+  const rows = conflict.conflicts.map((date) => {
+    const group = node("fieldset");
+    const options = node("div", "conflict-row");
+    group.append(node("legend", "", displayDay(date, true)), options);
+    for (const [choice, title] of [["local", "この端末"], ["remote", "GitHub"]]) {
+      const label = node("label", "conflict-option");
+      const radio = node("input");
+      radio.type = "radio";
+      radio.name = date;
+      radio.value = choice;
+      radio.required = true;
+      label.append(radio, node("span", "", title), node("p", "", conflictDescription(conflict[choice][date])));
+      options.append(label);
+    }
+    return group;
+  });
+  $("conflict-choices").replaceChildren(...rows);
+  $("conflict-dialog").showModal();
+}
+
+async function syncInside(resolution) {
+  const next = await syncRemote(ownerState, resolution);
+  await persistState(next);
+  syncIssue = "";
+  status("top-message");
+  status("connection-message", "GitHubに同期しました。");
+}
+
+function reportSyncError(error, options) {
+  syncIssue = error instanceof RecordConflict ? ownerError(error) : error.message;
+  status("connection-message", syncIssue, true);
+  status("top-message", error instanceof CloudConflict ? "同期の確認が必要です。共有設定から残す記録を選べます。" : syncIssue, true);
+  if (options.fromEditor) status("save-message", "端末に保存しました。GitHubへの同期は共有設定で再試行できます。", true);
+  if (error instanceof CloudConflict && !options.quiet) showConflict(error);
+  renderOwnerConnection();
+}
+
+async function synchronize(options = {}) {
+  if (!ownerState?.cloud || working) return;
+  if (ownerState.cloud.syncedAt === null || hasPending(ownerState)) status("connection-message", "GitHubと同期しています…");
+  try {
+    const done = await runOwnerOperation("sync", () => syncInside(options.resolution));
+    if (done && options.fromEditor && !editorDirty()) status("save-message", "端末とGitHubに保存しました。");
+  } catch (error) {
+    reportSyncError(error, options);
+  }
+}
+
+async function connectGitHub(event) {
+  event.preventDefault();
+  if (working || ownerState?.cloud || location.protocol !== "https:") return;
+  const repo = canonicalRepo($("repo-name").value);
+  const token = $("repo-token").value.trim();
+  const existing = $("existing-code").value.trim();
+  if (!repo || !validToken(token)) {
+    status("connection-message", "「ユーザー名/リポジトリ名」と、Fine-grainedトークンを確認してください。", true);
+    return;
+  }
+  status("connection-message", "保存先を確認しています…");
+  try {
+    await runOwnerOperation("connect", async () => {
+      await verifyRepo(repo, token);
+      const previous = await readRemote(repo, token);
+      let code;
+      if (previous) {
+        if (!validCode(existing)) {
+          $("restore-guide").open = true;
+          $("existing-code").focus();
+          status("connection-message", "この保存先には記録があります。以前発行した閲覧コードを入力してください。", true);
+          return;
+        }
+        code = existing;
+        await openArchive(await importCode(code, ["decrypt"]), repo, previous.text);
+      } else {
+        if (existing) throw new Error("この保存先には共有ファイルがありません。リポジトリ名を確認してください。");
+        code = generateCode();
+      }
+      const cloud = { repo, token, code, base: {}, syncedAt: null };
+      await persistState({ ...ownerState, cloud });
+      $("connect-form").reset();
+      $("restore-guide").open = false;
+      resetShareSecrets();
+      status("connection-message", "日記をGitHubに同期しています…");
+      await syncInside();
+    });
+  } catch (error) {
+    if (ownerState.cloud) reportSyncError(error, {});
+    else status("connection-message", error instanceof RecordConflict ? ownerError(error) : error.message, true);
+  }
+}
+
+async function updateToken(event) {
+  event.preventDefault();
+  if (working || !ownerState?.cloud) return;
+  const token = $("updated-token").value.trim();
+  if (!validToken(token)) {
+    status("connection-message", "Fine-grainedトークンを確認してください。", true);
+    return;
+  }
+  status("connection-message", "トークンを確認しています…");
+  try {
+    await runOwnerOperation("token", async () => {
+      await verifyRepo(ownerState.cloud.repo, token);
+      await persistState({ ...ownerState, cloud: { ...ownerState.cloud, token } });
+      $("update-token-form").reset();
+      await syncInside();
+    });
+  } catch (error) {
+    reportSyncError(error, {});
+  }
+}
+
+async function disconnect() {
+  if (working || !ownerState?.cloud || !window.confirm("この端末からGitHubとの接続を解除しますか？")) return;
+  try {
+    await runOwnerOperation("save", async () => {
+      await persistState({ ...ownerState, cloud: null });
+      syncIssue = "";
+      status("top-message");
+      resetShareSecrets();
+      status("connection-message", "接続を解除しました。端末の日記は引き続き開けます。");
+    });
+  } catch (error) {
+    status("connection-message", ownerError(error), true);
+  }
+}
+
+function toggleCode() {
+  const code = $("share-code");
+  const show = code.type === "password";
+  code.type = show ? "text" : "password";
+  $("show-code").textContent = show ? "コードを隠す" : "コードを表示";
+  $("show-code").setAttribute("aria-pressed", String(show));
+}
+
+async function copyField(id, label) {
+  const input = $(id);
+  try {
+    await navigator.clipboard.writeText(input.value);
+    status("copy-message", label + "をコピーしました。");
+  } catch {
+    if (input.type === "password") toggleCode();
+    input.focus();
+    input.select();
+    status("copy-message", label + "を選択しました。端末のコピー操作を使ってください。");
+  }
+}
+
+function lockOwner() {
+  if (working || (editorDirty() && !window.confirm("保存前の入力があります。日記を閉じますか？"))) return;
+  ownerKey = undefined;
+  ownerState = undefined;
+  ownerBox = undefined;
+  loadedDay = undefined;
+  syncIssue = "";
+  currentConflict = undefined;
+  $("conflict-choices").replaceChildren();
+  $("journal").hidden = true;
+  $("lock").hidden = true;
+  $("site-footer").hidden = true;
+  $("hero-label").textContent = "自分のための小さな日記";
+  fillEditor(isoToday());
+  renderRecent();
+  $("month-detail").replaceChildren();
+  $("calendar-grid").replaceChildren();
+  $("month-moods").replaceChildren();
+  $("trend-list").replaceChildren();
+  $("week-list").replaceChildren();
+  $("month-average").textContent = "";
+  $("connect-form").reset();
+  $("update-token-form").reset();
+  resetShareSecrets();
+  renderOwnerConnection();
+  status("top-message");
+  status("save-message");
+  status("connection-message");
+  status("owner-gate-message");
+  showOwnerGate(true);
+  $("passphrase").focus();
+}
+
+async function initOwner() {
+  try {
+    ownerDatabase = await openVault();
+    const settings = await readItem(ownerDatabase, SETTINGS_ID);
+    populateMoodOptions();
+    bindTimePicker();
+    for (const radio of $("outside-options").querySelectorAll("input")) {
+      radio.addEventListener("change", () => { if (radio.checked) queueQuickSave("outside", radio.value); });
+    }
+    $("owner-gate-form").addEventListener("submit", unlockOwner);
+    $("editor-form").addEventListener("submit", saveEntry);
+    $("editor-form").addEventListener("input", () => {
+      refreshEditorControls();
+      status("save-message");
+    });
+    const leaveDialog = $("leave-dialog");
+    leaveDialog.addEventListener("close", () => { pendingEditorDate = undefined; });
+    leaveDialog.addEventListener("cancel", (event) => { if (working === "save") event.preventDefault(); });
+    $("keep-editing").addEventListener("click", () => leaveDialog.close());
+    $("discard-and-leave").addEventListener("click", () => {
+      const date = pendingEditorDate;
+      leaveDialog.close();
+      if (!date) return;
+      fillEditor(editDate);
+      if (chooseEditorDate(date)) setPanel("main", true);
+    });
+    $("save-and-leave").addEventListener("click", async (event) => {
+      const date = pendingEditorDate;
+      if (!date) return;
+      if (working) { status("leave-message", "同期中です。完了してから保存できます。"); return; }
+      const controls = ["save-and-leave", "discard-and-leave", "keep-editing"];
+      controls.forEach((id) => { $(id).disabled = true; });
+      try {
+        const saved = await saveEntry(event, false);
+        if (saved) {
+          leaveDialog.close();
+          if (chooseEditorDate(date)) setPanel("main", true);
+          if (ownerState.cloud) void synchronize({ quiet: true });
+        } else status("leave-message", $("save-message").textContent || "保存できませんでした。入力は残っています。", true);
+      } finally { controls.forEach((id) => { $(id).disabled = false; }); }
+    });
+    $("entry-date").addEventListener("change", (event) => {
+      if (!chooseEditorDate(event.target.value)) event.target.value = editDate;
+    });
+    $("undo-activity").addEventListener("click", () => {
+      if (!removedActivity || removedActivity.date !== editDate || $("activity-list").children.length >= MAX_ACTIVITIES) return;
+      const { row, index } = removedActivity;
+      $("activity-list").insertBefore(row, $("activity-list").children[index] ?? null);
+      removedActivity = undefined;
+      $("undo-activity").hidden = true;
+      $("activity-notice").textContent = "元に戻しました。";
+      renumberActivities();
+      refreshEditorControls();
+      row.querySelector("summary").focus();
+    });
+    for (const [id, distance] of [["previous-day", -1], ["next-day", 1]]) {
+      $(id).addEventListener("click", () => {
+        const day = dateValue(editDate);
+        day.setUTCDate(day.getUTCDate() + distance);
+        const next = day.toISOString().slice(0, 10);
+        if (validDate(next)) chooseEditorDate(next);
+      });
+    }
+    $("go-today").addEventListener("click", () => {
+      if (chooseEditorDate(isoToday())) $("editor-title").focus();
+    });
+    $("add-activity").addEventListener("click", () => {
+      addActivity({}, true);
+      renumberActivities();
+    });
+    $("clear-mood").addEventListener("click", () => {
+      $("mood-options").querySelector("input:checked").checked = false;
+      queueQuickSave("mood", null);
+      refreshEditorControls();
+      status("save-message");
+      $("mood-options").querySelector("input").focus();
+    });
+    $("clear-outside").addEventListener("click", () => {
+      $("outside-options").querySelector("input:checked").checked = false;
+      queueQuickSave("outside", null);
+      refreshEditorControls();
+    });
+    $("delete-entry").addEventListener("click", deleteEntry);
+    $("lock").addEventListener("click", lockOwner);
+    $("open-share-settings").addEventListener("click", () => setPanel("share", true));
+    $("connect-form").addEventListener("submit", connectGitHub);
+    $("sync-now").addEventListener("click", () => synchronize());
+    $("update-token-form").addEventListener("submit", updateToken);
+    $("disconnect").addEventListener("click", disconnect);
+    $("show-code").addEventListener("click", toggleCode);
+    $("copy-link").addEventListener("click", () => copyField("share-link", "閲覧URL"));
+    $("copy-code").addEventListener("click", () => copyField("share-code", "閲覧コード"));
+    $("close-conflict").addEventListener("click", () => $("conflict-dialog").close());
+    $("conflict-dialog").addEventListener("close", () => {
+      currentConflict = undefined;
+      $("conflict-choices").replaceChildren();
+    });
+    $("conflict-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const choices = new FormData(event.target);
+      const conflict = currentConflict;
+      if (!conflict) return;
+      const resolution = Object.fromEntries(conflict.conflicts.map((date) => [date, {
+        choice: choices.get(date), local: conflict.local[date]?.rev, remote: conflict.remote[date]?.rev
+      }]));
+      $("conflict-dialog").close();
+      void synchronize({ resolution });
+    });
+    window.addEventListener("online", () => {
+      if (ownerState?.cloud && hasPending(ownerState)) void synchronize({ quiet: true });
+    });
+    window.addEventListener("beforeunload", (event) => {
+      if (ownerKey && editorDirty()) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    });
+    if (location.protocol !== "https:") {
+      status("connection-message", "GitHub PagesのHTTPS公開URLで開くと、GitHubに接続できます。");
+    }
+    systemStatus("");
+    showOwnerGate(settings);
+  } catch {
+    systemStatus("端末の保存先を開けませんでした。ブラウザーの保存設定を確認してください。");
+  }
+}
+
+let readerSnapshot;
+let readerKey;
+let readerDatabase;
+let readerEnvelope;
+let rememberReader = false;
+let readerWork = false;
+let readerGeneration = 0;
+let lastReaderCheck = 0;
+
+function readerCacheId() {
+  return "viewer-v2:" + readerRepo;
+}
+
+async function rememberSession(text) {
+  if (!rememberReader) return;
+  try {
+    readerDatabase ??= await openVault();
+    if (!readerKey || !rememberReader) return;
+    await writeCache(readerDatabase, readerCacheId(), { key: readerKey, text });
+  } catch {
+    status("top-message", "この端末ではコードを記憶できませんでした。次に開くときもコードを入力してください。", true);
+    rememberReader = false;
+    $("lock-label").textContent = "閉じる";
+  }
+}
+
+function renderReaderStatus() {
+  if (legacySnapshot) syncPill("共有時点の記録");
+  else syncPill(TIME_FORMAT.format(new Date(readerSnapshot.updatedAt)) + " 更新");
+}
+
+function showReader(snapshot) {
+  const first = !readerSnapshot;
+  const followedLatest = !first && selectedReaderDate === datesNewest(readerSnapshot.days)[0];
+  readerSnapshot = snapshot;
+  if (first || followedLatest) selectedReaderDate = datesNewest(snapshot.days)[0];
+  $("reader-gate").hidden = true;
+  $("journal").hidden = false;
+  $("lock").hidden = false;
+  $("lock-label").textContent = rememberReader ? "記憶を消す" : "閉じる";
+  $("refresh-reader").hidden = Boolean(legacySnapshot);
+  $("site-footer").hidden = Boolean(legacySnapshot);
+  $("site-footer").textContent = "同じ閲覧URLから、GitHub上の最新の記録を開けます。";
+  if (first) {
+    readerLimit = 10;
+    resetCalendar(selectedReaderDate ?? isoToday());
+    setPanel("main");
+  }
+  renderReaderLog();
+  if (displayedPanel === "month") renderMonth();
+  renderReaderStatus();
+}
+
+async function readShared() {
+  const file = await readRemote(readerRepo);
+  if (!file) throw new Error("GitHubに共有ファイルが見つかりません。日記を共有した人にURLを確認してください。");
+  return file.text;
+}
+
+async function refreshReader() {
+  if (legacySnapshot || readerWork || !readerKey) return;
+  const generation = readerGeneration;
+  readerWork = true;
+  $("refresh-reader").disabled = true;
+  syncPill("更新中", "wait");
+  lastReaderCheck = Date.now();
+  try {
+    const text = await readShared();
+    if (generation !== readerGeneration) return;
+    const snapshot = await openArchive(readerKey, readerRepo, text);
+    if (generation !== readerGeneration) return;
+    readerEnvelope = text;
+    showReader(snapshot);
+    status("top-message");
+    await rememberSession(text);
+  } catch (error) {
+    if (generation !== readerGeneration) return;
+    syncPill("前回の記録", "wait");
+    status("top-message", error.message + " 前回の記録を表示しています。", true);
+  } finally {
+    if (generation === readerGeneration) {
+      readerWork = false;
+      $("refresh-reader").disabled = false;
+    }
+  }
+}
+
+async function unlockReader(event) {
+  event.preventDefault();
+  if (readerWork) return;
+  const code = $("reader-code").value.trim();
+  if (!validCode(code)) {
+    status("reader-gate-message", "受け取った22文字の閲覧コードを入力してください。", true);
+    return;
+  }
+  const open = $("open-reader");
+  readerWork = true;
+  open.disabled = true;
+  status("reader-gate-message", "日記を開いています…");
+  try {
+    const key = await importCode(code, ["decrypt"]);
+    let snapshot;
+    if (legacySnapshot) {
+      let day;
+      try {
+        day = await unseal(key, legacySnapshot, "hibi-share-v1");
+        if (!validDay(day)) throw new Error();
+      } catch {
+        throw new Error("閲覧コードとリンクの組み合わせを確認してください。");
+      }
+      snapshot = { days: { [day.date]: { ...day, rev: crypto.randomUUID() } } };
+    } else {
+      readerEnvelope ??= await readShared();
+      snapshot = await openArchive(key, readerRepo, readerEnvelope);
+      lastReaderCheck = Date.now();
+    }
+    readerKey = key;
+    rememberReader = !legacySnapshot && $("remember-code").checked;
+    $("reader-gate-form").reset();
+    status("reader-gate-message");
+    showReader(snapshot);
+    (legacySnapshot ? $("reader-detail").querySelector("h2") : $("reader-overview-title")).focus({ preventScroll: true });
+    await rememberSession(readerEnvelope);
+  } catch (error) {
+    status("reader-gate-message", error.message, true);
+  } finally {
+    readerWork = false;
+    open.disabled = false;
+  }
+}
+
+async function lockReader() {
+  readerGeneration += 1;
+  readerKey = undefined;
+  readerSnapshot = undefined;
+  readerEnvelope = undefined;
+  rememberReader = false;
+  readerWork = false;
+  $("journal").hidden = true;
+  $("lock").hidden = true;
+  $("site-footer").hidden = true;
+  $("reader-list").replaceChildren();
+  $("reader-detail").replaceChildren();
+  $("month-detail").replaceChildren();
+  $("calendar-grid").replaceChildren();
+  $("month-moods").replaceChildren();
+  $("trend-list").replaceChildren();
+  $("week-list").replaceChildren();
+  $("reader-week").replaceChildren();
+  $("reader-life").replaceChildren();
+  $("month-average").textContent = "";
+  status("top-message");
+  $("refresh-reader").disabled = false;
+  $("reader-gate").hidden = false;
+  $("reader-code").focus();
+  if (readerDatabase) {
+    try {
+      await writeCache(readerDatabase, readerCacheId(), null);
+    } catch {
+      status("reader-gate-message", "コードの記憶を消せませんでした。ブラウザーのサイトデータから削除できます。", true);
+    }
+  }
+}
+
+async function initReader() {
+  document.body.dataset.mode = "reader";
+  $("mode").textContent = "閲覧専用";
+  $("hero-label").textContent = legacySnapshot ? "共有した日の記録" : "共有された日記";
+  $("hero-title").textContent = "共有された日記";
+  $("hero-note").textContent = legacySnapshot ? "共有された日の記録を開けます。" : "日付や週ごとの変化を確認できます。";
+  $("nav-main-label").textContent = "日々の記録";
+  $("nav-share").hidden = true;
+  $("lock").setAttribute("aria-label", "閲覧を閉じて、端末のコードの記憶を消す");
+  $("remember-row").hidden = Boolean(legacySnapshot);
+  if (legacySnapshot ? !/^[A-Za-z0-9_-]{39,40000}$/.test(legacySnapshot) : !readerRepo) {
+    systemStatus("共有URLの形式を確認してください。日記を共有した人から、閲覧URLを受け取ってください。");
+    return;
+  }
+  $("reader-gate-form").addEventListener("submit", unlockReader);
+  $("refresh-reader").addEventListener("click", refreshReader);
+  $("lock").addEventListener("click", lockReader);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now() - lastReaderCheck >= 300000) void refreshReader();
+  });
+  if (!legacySnapshot) {
+    try {
+      readerDatabase = await openVault();
+      const cached = await readItem(readerDatabase, readerCacheId());
+      if (cached?.key && cached.text) {
+        const snapshot = await openArchive(cached.key, readerRepo, cached.text);
+        readerKey = cached.key;
+        rememberReader = true;
+        readerEnvelope = cached.text;
+        systemStatus("");
+        showReader(snapshot);
+        void refreshReader();
+        return;
+      }
+    } catch {
+      // Viewers can enter their code even when browser storage is unavailable.
+    }
+  }
+  systemStatus("");
+  $("reader-gate").hidden = false;
+}
+
+const params = new URL(location.href).searchParams;
+const sharedView = params.get("view") === "1";
+const legacySnapshot = !sharedView && location.hash.startsWith("#read=") ? location.hash.slice(6) : "";
+const isReader = sharedView || Boolean(legacySnapshot);
+const readerRepo = canonicalRepo(params.get("repo") ?? "");
+
+document.querySelector(".skip-link").addEventListener("click", (event) => {
+  event.preventDefault();
+  $("main").focus();
+});
+window.addEventListener("hashchange", () => {
+  if (location.hash.startsWith("#read=") && location.hash.slice(6) !== legacySnapshot) location.reload();
+});
+if (!globalThis.crypto?.subtle) {
+  systemStatus("暗号化を使うため、GitHub PagesのHTTPS公開URLをブラウザーで開いてください。");
+} else if (!isReader && window.top !== window.self) {
+  systemStatus("編集画面は、ブラウザーの別タブで開いてください。");
+} else {
+  systemStatus("日記を準備しています…");
+  bindViews();
+  if (isReader) void initReader();
+  else void initOwner();
+}
+</script>
+</body>
+</html>
