@@ -888,15 +888,14 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                 <div class="activity-undo"><span id="activity-notice" role="status"></span><button type="button" class="text-button" id="undo-activity" hidden>元に戻す</button></div>
                 <details class="quick-time" id="time-composer">
                   <summary id="add-activity">＋ したことを追加</summary>
-                  <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
-                  <p class="muted">候補を押すと、行動名が入ります</p>
                   <div class="time-presets" id="time-presets" aria-label="行動を選ぶ">
+                    <button type="button" class="button secondary" data-action="食事" data-start="" data-end="" aria-pressed="false">食事</button>
                     <button type="button" class="button secondary" data-action="仕事" data-start="09:00" data-end="18:00" aria-pressed="false">仕事</button>
                     <button type="button" class="button secondary" data-action="昼休み" data-start="12:00" data-end="13:00" aria-pressed="false">昼休み</button>
                     <button type="button" class="button secondary" data-action="睡眠" data-start="23:00" data-end="07:00" aria-pressed="false">睡眠</button>
                     <button type="button" class="button secondary" data-action="外出" data-start="10:00" data-end="11:00" aria-pressed="false">外出</button>
-                    <button type="button" class="button secondary" data-action="食事" data-start="" data-end="" aria-pressed="false">食事</button>
                   </div>
+                  <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
                   <p class="quick-preview" id="quick-preview" role="status"></p>
                   <details id="quick-details" class="time-band"><summary id="quick-details-label">時間・場所を入れる（任意）</summary>
                   <label class="field"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
