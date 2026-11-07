@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Nw23Hzp1OFlRnjRyKdbyyHM1/gHATpI/oMWFa47Ncbc='; style-src 'sha256-eo4T+kOYT4hHl7Lkgr36vDExuED2n9v78rnt+5rxM7U='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-A7ju1KfAETVqZqyUx/EFFn1fpYsvG5mOfFQ0cqnfun0='; style-src 'sha256-eo4T+kOYT4hHl7Lkgr36vDExuED2n9v78rnt+5rxM7U='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -2759,12 +2759,32 @@ async function saveNewActivity(activity) {
     return false;
   }
   const day = dayWithoutRevision(current) ?? { date: editDate, mood: null, outside: null, note: "", activities: [] };
+  if ((activity.start || activity.end) && day.activities.some((item) => ["action", "place", "start", "end"].every((key) => item[key] === activity[key]))) {
+    // A committed record can be missing from the draft list (for example after
+    // an uncommitted removal). A retry must reconcile the UI, not strand it.
+    const sameActivity = (item) => ["action", "place", "start", "end"].every((key) => item[key] === activity[key]);
+    if (!editorDraft().activities.some(sameActivity)) {
+      if ($("activity-list").children.length >= MAX_ACTIVITIES) {
+        status("activity-save-message", "この行動は端末に保存済みです。一覧が16件あるため、編集中の行動を整理してから再度保存してください。", true);
+        return false;
+      }
+      addActivity(activity);
+      renumberActivities();
+      if (removedActivity?.date === editDate && sameActivity(Object.fromEntries(
+        [["start", ".start-time"], ["end", ".end-time"], ["place", ".place"], ["action", ".action"]]
+          .map(([key, selector]) => [key, removedActivity.row.querySelector(selector).value.trim()])
+      ))) {
+        removedActivity = undefined;
+        $("undo-activity").hidden = true;
+      }
+    }
+    $("activity-notice").textContent = activity.action + "は端末に保存済みです。一覧に表示しています。";
+    refreshEditorControls();
+    if (ownerState.cloud) void synchronize();
+    return true;
+  }
   if (day.activities.length >= MAX_ACTIVITIES || $("activity-list").children.length >= MAX_ACTIVITIES) {
     status("activity-save-message", "行動は1日16件まで保存できます。", true);
-    return false;
-  }
-  if ((activity.start || activity.end) && day.activities.some((item) => ["action", "place", "start", "end"].every((key) => item[key] === activity[key]))) {
-    status("activity-save-message", "同じ内容はすでに保存されています。");
     return false;
   }
   const markOutside = activity.action === "外出" && !Object.hasOwn(pendingQuickSave?.patch ?? {}, "outside")
@@ -3404,3 +3424,4 @@ if (!globalThis.crypto?.subtle) {
 </script>
 </body>
 </html>
+
