@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-2UwEunRP0YnH9fxozcw+I/At4ia1CTU457A1+2vvcS8='; style-src 'sha256-/UqfJkse0OfEWklT08bKz/1Y8fa17z2lHggcvtvTMik='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-yhSogK+gqq/WRXF8OYB8wmhx9ymg1XXH0jZFZ5mV0lY='; style-src 'sha256-hM1UJV8ft9scMeVhF0VOBWRFeeL2WuFUKZt2DbyaMug='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -621,7 +621,6 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .sync-details .button { margin-top: 9px; }
 
 /* Low-effort check-in first; precise time entry remains within reach. */
-.checkin-hint { color: var(--muted); font-size: .8rem; margin-bottom: 14px; }
 #editor-fields > .mood-section { border-top: 0; padding-top: 0; }
 #editor-fields > .form-section { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
 .quick-time .time-row { margin: 12px 0; }
@@ -873,7 +872,6 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
           </div>
           <form id="editor-form">
             <fieldset id="editor-fields">
-              <p class="checkin-hint">残したいものだけで大丈夫です。</p>
               <fieldset class="mood-section">
                 <legend>その日の気分 <span class="auto-tag">選ぶと保存</span></legend>
                 <div class="mood-options" id="mood-options"></div>
@@ -959,7 +957,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                 <button type="submit" class="button primary icon-text" id="save-entry">
                   <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span id="save-label">変更を保存</span>
                 </button>
-                <span class="save-state" id="save-state" role="status">残せる項目だけで大丈夫です</span>
+                <span class="save-state" id="save-state" role="status"></span>
 
               </div>
             </fieldset>
@@ -2713,7 +2711,7 @@ function refreshEditorControls() {
   const hasOtherDraft = draft.note !== (loadedDay?.note ?? "") || activitiesChanged;
   $("day-save-bar").hidden = !dirty || Boolean(pendingQuickSave && !hasOtherDraft && !quickSaveError);
   $("save-state").textContent = working === "save" ? "保存中…" : quickSaveError ? quickSaveError : pendingQuickSave ? "選択を保存しています…" : dirty ? "未保存の変更"
-    : !loadedDay ? "残せる項目だけで大丈夫です"
+    : !loadedDay ? ""
     : ownerState?.cloud && !hasPending(ownerState) ? "共有済み" : "端末に保存済み";
   const onlyMemo = draft.note !== (loadedDay?.note ?? "")
     && !activitiesChanged
