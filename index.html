@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Wndws/wbz4hQqXYtemckG1T9bRKvLQccKas6KUinVss='; style-src 'sha256-KPASlVcJ4rnIObemwyw8q7PkRc5nSuRspWLk3/wLe/A='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tW0OHSH/mnIVXu7gCaQgnT8/BagOajJ+Nyrc9gDjd0k='; style-src 'sha256-KPASlVcJ4rnIObemwyw8q7PkRc5nSuRspWLk3/wLe/A='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -2743,7 +2743,7 @@ async function saveNewActivity(activity) {
     status("activity-save-message", "行動は1日16件まで保存できます。", true);
     return false;
   }
-  if (day.activities.some((item) => ["action", "place", "start", "end"].every((key) => item[key] === activity[key]))) {
+  if ((activity.start || activity.end) && day.activities.some((item) => ["action", "place", "start", "end"].every((key) => item[key] === activity[key]))) {
     status("activity-save-message", "同じ内容はすでに保存されています。");
     return false;
   }
