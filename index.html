@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-A7ju1KfAETVqZqyUx/EFFn1fpYsvG5mOfFQ0cqnfun0='; style-src 'sha256-eo4T+kOYT4hHl7Lkgr36vDExuED2n9v78rnt+5rxM7U='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-U4rysfmz4TxlYPLQyY1aFz4C8yRO8FYx6fGCpVC2tJs='; style-src 'sha256-eo4T+kOYT4hHl7Lkgr36vDExuED2n9v78rnt+5rxM7U='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -953,6 +953,13 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
         </section>
 
         <aside class="sidebar">
+          <details class="panel compact">
+            <summary>不具合を報告</summary>
+            <p class="muted">保存状態・行動の時刻・操作履歴をコピーします。合言葉、トークン、共有URL、メモ・場所・行動の本文は含みません。</p>
+            <button type="button" class="button secondary full" id="copy-debug">デバッグ情報をコピー</button>
+            <p class="message" id="debug-message" role="status"></p>
+            <textarea id="debug-output" aria-label="デバッグ情報（コピーできない場合は長押ししてコピー）" rows="8" readonly hidden></textarea>
+          </details>
           <section class="panel compact" aria-labelledby="recent-title">
             <div class="panel-top">
               <h2 id="recent-title">最近の記録</h2>
@@ -2749,6 +2756,7 @@ function ownerError(error) {
 }
 
 async function saveNewActivity(activity) {
+  debugEvent("activity-save-request");
   if (!ownerKey || working) {
     status("activity-save-message", "処理中です。終わったらもう一度押してください。");
     return false;
@@ -2760,6 +2768,7 @@ async function saveNewActivity(activity) {
   }
   const day = dayWithoutRevision(current) ?? { date: editDate, mood: null, outside: null, note: "", activities: [] };
   if ((activity.start || activity.end) && day.activities.some((item) => ["action", "place", "start", "end"].every((key) => item[key] === activity[key]))) {
+    debugEvent("activity-already-saved");
     // A committed record can be missing from the draft list (for example after
     // an uncommitted removal). A retry must reconcile the UI, not strand it.
     const sameActivity = (item) => ["action", "place", "start", "end"].every((key) => item[key] === activity[key]);
@@ -2769,6 +2778,7 @@ async function saveNewActivity(activity) {
         return false;
       }
       addActivity(activity);
+      debugEvent("activity-list-restored");
       renumberActivities();
       if (removedActivity?.date === editDate && sameActivity(Object.fromEntries(
         [["start", ".start-time"], ["end", ".end-time"], ["place", ".place"], ["action", ".action"]]
@@ -2794,10 +2804,12 @@ async function saveNewActivity(activity) {
     const done = await runOwnerOperation("save", async () => {
       const next = { ...ownerState, days: { ...ownerState.days, [record.date]: record } };
       const box = await persistOwnerState(ownerDatabase, ownerKey, ownerBox, next);
+      debugEvent("activity-storage-written");
       ownerState = next;
       ownerBox = box;
       loadedDay = record;
       addActivity(activity);
+      debugEvent("activity-list-appended");
       if (markOutside) {
         for (const radio of $("outside-options").querySelectorAll("input")) radio.checked = radio.value === "out";
       }
@@ -2809,6 +2821,7 @@ async function saveNewActivity(activity) {
     if (done && ownerState.cloud) void synchronize();
     return Boolean(done);
   } catch (error) {
+    debugEvent("activity-save-error", error);
     status("activity-save-message", ownerError(error) + " 入力内容は残っています。", true);
     return false;
   }
@@ -2912,11 +2925,14 @@ function reportSyncError(error, options) {
 
 async function synchronize(options = {}) {
   if (!ownerState?.cloud || working) return;
+  debugEvent("sync-start");
   if (ownerState.cloud.syncedAt === null || hasPending(ownerState)) status("connection-message", "GitHubと同期しています…");
   try {
     const done = await runOwnerOperation("sync", () => syncInside(options.resolution));
+    debugEvent(done ? "sync-complete" : "sync-skipped");
     if (done && options.fromEditor && !editorDirty()) status("save-message", "端末とGitHubに保存しました。");
   } catch (error) {
+    debugEvent("sync-error", error);
     reportSyncError(error, options);
   }
 }
@@ -3008,6 +3024,62 @@ function toggleCode() {
   $("show-code").setAttribute("aria-pressed", String(show));
 }
 
+const debugEvents = [];
+function debugEvent(event, error) {
+  debugEvents.push({ at: new Date().toISOString(), event,
+    ...(error ? { error: ["TypeError", "RangeError", "ReferenceError", "QuotaExceededError", "InvalidStateError", "AbortError"].includes(error.name) ? error.name : "Error" } : {}) });
+  if (debugEvents.length > 30) debugEvents.shift();
+}
+
+function diagnosticReport() {
+  // Explicit allowlist only: never serialize state, URLs, errors or free text.
+  const names = new Map();
+  const anonymous = (value) => {
+    if (!value) return null;
+    if (!names.has(value)) names.set(value, "text-" + (names.size + 1));
+    return names.get(value);
+  };
+  const activities = (items = []) => items.map((item) => ({
+    start: validTime(item.start) ? item.start : "invalid",
+    end: validTime(item.end) ? item.end : "invalid",
+    action: anonymous(item.action), place: anonymous(item.place)
+  }));
+  const saved = ownerState?.days[editDate];
+  const draft = editorDraft();
+  return JSON.stringify({ app: "日々の足あと", build: "2026-11-07-debug-1", at: new Date().toISOString(),
+    viewport: { width: window.innerWidth, height: window.innerHeight, touch: navigator.maxTouchPoints > 0 },
+    panel: displayedPanel, working: working || "idle", unlocked: Boolean(ownerKey),
+    storage: "現在の画面が保持する保存状態（保存領域の再読込はしません）",
+    connected: Boolean(ownerState?.cloud), pendingSync: ownerState ? hasPending(ownerState) : false,
+    syncError: Boolean(syncIssue), pendingQuickSave: Boolean(pendingQuickSave),
+    savedMatchesLoaded: dayEquals(saved, loadedDay), unsavedChanges: editorDirty(),
+    composerOpen: $("time-composer").open, composerDirty: activityDraftDirty(),
+    savedActivities: activities(saved?.activities), loadedActivities: activities(loadedDay?.activities),
+    displayedActivities: activities(draft.activities),
+    composer: activities([{ start: $("quick-start").value, end: $("quick-end").value,
+      action: $("quick-action").value.trim(), place: $("quick-place").value.trim() }])[0],
+    noteChanged: draft.note !== (saved?.note ?? ""),
+    events: debugEvents.slice()
+  }, null, 2);
+}
+
+async function copyDebug() {
+  const report = diagnosticReport();
+  try {
+    await navigator.clipboard.writeText(report);
+    $("debug-output").value = "";
+    $("debug-output").hidden = true;
+    status("debug-message", "コピーしました。このままチャットに貼り付けてください。");
+  } catch {
+    const output = $("debug-output");
+    output.value = report;
+    output.hidden = false;
+    output.focus();
+    output.select();
+    status("debug-message", "自動コピーできませんでした。下の情報を長押ししてコピーしてください。");
+  }
+}
+
 async function copyField(id, label) {
   const input = $(id);
   try {
@@ -3023,6 +3095,10 @@ async function copyField(id, label) {
 
 function lockOwner() {
   if (working || ((editorDirty() || activityDraftDirty()) && !window.confirm("保存前の入力があります。日記を閉じますか？"))) return;
+  debugEvents.length = 0;
+  $("debug-output").value = "";
+  $("debug-output").hidden = true;
+  status("debug-message");
   ownerKey = undefined;
   ownerState = undefined;
   ownerBox = undefined;
@@ -3142,6 +3218,7 @@ async function initOwner() {
     $("show-code").addEventListener("click", toggleCode);
     $("copy-link").addEventListener("click", () => copyField("share-link", "閲覧URL"));
     $("copy-code").addEventListener("click", () => copyField("share-code", "閲覧コード"));
+    $("copy-debug").addEventListener("click", copyDebug);
     $("close-conflict").addEventListener("click", () => $("conflict-dialog").close());
     $("conflict-dialog").addEventListener("close", () => {
       currentConflict = undefined;
