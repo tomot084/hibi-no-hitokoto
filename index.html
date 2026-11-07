@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-y3/K1TPjx27cn5Ue4tOmEB4VHblOnpWUg2rcjTdZJpU='; style-src 'sha256-8fvfIR26EO0TEeOcHjg0pQe/qqnY2YwWTWPrHQM9yOo='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-2UwEunRP0YnH9fxozcw+I/At4ia1CTU457A1+2vvcS8='; style-src 'sha256-/UqfJkse0OfEWklT08bKz/1Y8fa17z2lHggcvtvTMik='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -245,11 +245,15 @@ legend { padding: 0; }
 .mood-face { width: 36px; height: 36px; flex-shrink: 0; }
 .mood-choice input:checked ~ span { color: var(--green-dark); font-weight: 800; }
 .mood-section .text-button { margin-block: 2px -6px; }
-.outside-section { margin-top: 17px; }
-.outside-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
-.outside-options label { display: flex; align-items: center; gap: 7px; min-height: 45px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fafbf6; cursor: pointer; font-size: .86rem; }
+.outside-section { margin-top: 12px; }
+.outside-row { display: grid; grid-template-columns: auto minmax(0, 320px); align-items: center; gap: 10px; }
+#outside-label { color: var(--muted); font-size: .8rem; font-weight: 680; }
+.outside-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.outside-options label { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: transparent; cursor: pointer; font-size: .8rem; }
+.outside-options input { flex-shrink: 0; margin: 0; }
 .outside-options label:has(input:checked) { border-color: var(--green); background: var(--green-soft); }
-.outside-section .text-button { margin: 2px 0 -6px; }
+.outside-feedback { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+.outside-feedback .text-button { margin-inline-start: auto; }
 .note-field { margin-top: 17px; }
 .note-field > span { font-size: 1rem; }
 .note-count { margin-top: 4px; color: var(--muted); font-size: .73rem; text-align: right; font-variant-numeric: tabular-nums; }
@@ -291,9 +295,11 @@ legend { padding: 0; }
 .day-card h2 { margin-bottom: 8px; }
 .day-card h3 { margin-bottom: 4px; }
 .day-card .overline { margin-bottom: 4px; }
-.day-mood { display: flex; gap: 8px; align-items: center; font-size: .94rem; font-weight: 720; }
-.day-mood .mood-face { width: 34px; height: 34px; }
-.outside-detail { display: inline-block; margin-top: 9px; padding: 3px 9px; border-radius: 999px; color: var(--green); background: var(--green-soft); font-size: .82rem; font-weight: 700; }
+.day-checkin { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.day-mood, .outside-detail { display: inline-flex; align-items: center; gap: 5px; font-size: .82rem; font-weight: 680; }
+.day-mood .mood-face { width: 28px; height: 28px; }
+.outside-detail { padding: 3px 8px; border-radius: 6px; color: var(--green); background: var(--green-soft); }
+.day-checkin .unrecorded { color: var(--muted); background: transparent; font-weight: 500; }
 .day-section { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
 .day-note, .timeline-action { white-space: pre-wrap; overflow-wrap: anywhere; }
 .day-edit { margin-top: 13px; }
@@ -549,7 +555,6 @@ body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color:
 .mood-section { border-top: 1px solid var(--line); padding-top: 17px; }
 .mood-choice { border-radius: 6px; background: transparent; }
 .mood-choice:has(input:checked) { background: var(--green-soft); border-color: var(--green); box-shadow: none; }
-.outside-options label { border-radius: 6px; background: transparent; }
 .note-field { margin-top: 20px; }
 textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e8e2 32px) !important; line-height: 32px; padding-top: 0; }
 .save-state { font-size: .75rem; color: var(--muted); }
@@ -700,7 +705,8 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .time-row input[type="time"]::-webkit-datetime-edit { padding: 0; }
 .time-arrow svg { width: 18px; height: 18px; }
 
-#mood-save-feedback, #outside-save-feedback { font-size: .8rem; margin-top: 6px; }
+#mood-save-feedback, #outside-save-feedback { font-size: .8rem; }
+#mood-save-feedback { margin-top: 6px; }
 #mood-save-feedback:empty, #outside-save-feedback:empty { display: none; }
 #activity-notice:not(:empty) { display: block; margin-block: 6px; }
 #time-composer > summary { color: var(--green); }
@@ -875,14 +881,18 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                 <button type="button" class="text-button" id="clear-mood" hidden>気分の選択を外す</button>
               </fieldset>
 
-              <fieldset class="outside-section">
-                <legend>外出 <span class="auto-tag">選ぶと保存</span></legend>
-                <div class="outside-options" id="outside-options">
-                  <label><input type="radio" name="outside" value="out"><span>外に出た</span></label>
-                  <label><input type="radio" name="outside" value="home"><span>家で過ごした</span></label>
+              <fieldset class="outside-section" aria-labelledby="outside-label">
+                <div class="outside-row">
+                  <span id="outside-label">外出</span>
+                  <div class="outside-options" id="outside-options">
+                    <label><input type="radio" name="outside" value="out"><span>外に出た</span></label>
+                    <label><input type="radio" name="outside" value="home"><span>家で過ごした</span></label>
+                  </div>
                 </div>
-                <p class="muted" id="outside-save-feedback" role="status"></p>
-                <button type="button" class="text-button" id="clear-outside" hidden>外出の選択を外す</button>
+                <div class="outside-feedback">
+                  <p class="muted" id="outside-save-feedback" role="status"></p>
+                  <button type="button" class="text-button" id="clear-outside" aria-label="外出を未記録に戻す" hidden>未記録に戻す</button>
+                </div>
               </fieldset>
 
               <section class="form-section" aria-labelledby="time-title">
@@ -1884,6 +1894,10 @@ function activityTimeline(activities, overnight) {
   return list;
 }
 
+function outsideLabel(value) {
+  return value === "out" ? "外に出た" : value === "home" ? "家で過ごした" : "未記録";
+}
+
 function renderDayCard(target, date, allowEdit) {
   target.replaceChildren();
   const days = visibleDays();
@@ -1895,16 +1909,14 @@ function renderDayCard(target, date, allowEdit) {
   target.append(node("p", "overline", "選んだ日の記録"), heading);
   if (!day && !overnight.length) {
     target.append(node("p", "muted", date ? "この日の記録はありません。記録がない理由や体調は分かりません。" : "日記が保存されると、ここで読めます。"));
-  } else if (day) {
-    if (day.mood) {
-      const mood = node("div", "day-mood");
-      mood.append(face(day.mood), node("span", "", MOODS[day.mood - 1].label));
-      target.append(mood);
-    }
-    if (day.outside) {
-      target.append(node("p", "outside-detail", day.outside === "out" ? "外に出た" : "家で過ごした"));
-    }
-    if (day.note) {
+  } else {
+    const checkin = node("div", "day-checkin");
+    const mood = node("p", day?.mood ? "day-mood" : "day-mood unrecorded");
+    if (day?.mood) mood.append(face(day.mood));
+    mood.append(node("span", "", "気分：" + (day?.mood ? MOODS[day.mood - 1].label : "未記録")));
+    checkin.append(mood, node("p", day?.outside ? "outside-detail" : "outside-detail unrecorded", "外出：" + outsideLabel(day?.outside)));
+    target.append(checkin);
+    if (day?.note) {
       const section = node("section", "day-section");
       section.append(node("h3", "", "メモ"), node("p", "day-note", day.note));
       target.append(section);
@@ -2116,7 +2128,7 @@ function renderMonth() {
   };
   $("month-count").replaceChildren(
     metric("記録", total + "日", monthCursor === current.slice(0, 7) ? "今月は途中です" : "この月の記録"),
-    metric("外に出た", outsideRated ? outsideOut + "日" : "—", "外出の記録 " + outsideRated + "日")
+    metric("外に出た日", outsideRated ? outsideOut + "日" : "—", "外出状況を記録した日 " + outsideRated + "日")
   );
   $("month-average").textContent = "気分平均 " + (rated ? (moodTotal / rated).toFixed(1) + "/5" : "—") + "（記録 " + rated + "日）。顔を1〜5に置き換えた目安で、回復度を表すものではありません。";
   $("month-moods").replaceChildren(...counts.map((count, index) => {
@@ -2160,7 +2172,9 @@ function renderMonth() {
       cell.append(node("small", "", outside));
       strip.append(cell);
     }
-    row.append(strip, node("p", "", "外出 " + (outsideKnown.length ? outsideDays.length + "日" : "—") + "（外出の記録 " + outsideKnown.length + "日）"));
+    row.append(strip, node("p", "", outsideKnown.length
+      ? "外に出た日 " + outsideDays.length + "日 ／ 外出状況を記録した日 " + outsideKnown.length + "日"
+      : "外出状況は未記録"));
     const numbers = node("details", "week-numbers");
     numbers.append(node("summary", "", "気分の数値を見る"), node("p", "", "気分平均 " + (average !== null ? average.toFixed(1) + "/5" : "—") + "（気分の記録 " + ratedDays.length + "日）。回復度ではありません。"));
     row.append(numbers);
@@ -2570,7 +2584,10 @@ async function flushQuickSave() {
       loadedDay = record;
       quickSaveError = "";
       for (const field of Object.keys(request.patch)) {
-        if (!Object.hasOwn(pendingQuickSave?.patch ?? {}, field)) $(field + "-save-feedback").textContent = "端末に保存しました。";
+        if (Object.hasOwn(pendingQuickSave?.patch ?? {}, field)) continue;
+        const value = request.patch[field];
+        $(field + "-save-feedback").textContent = field !== "outside" ? "端末に保存しました。"
+          : value ? outsideLabel(value) + " · 端末に保存済み" : "外出を未記録に戻しました。";
       }
       renderRecent();
       if (displayedPanel === "month") renderMonth();
@@ -2919,6 +2936,7 @@ async function saveNewActivity(activity) {
       debugEvent("activity-list-appended");
       if (markOutside) {
         for (const radio of $("outside-options").querySelectorAll("input")) radio.checked = radio.value === "out";
+        $("outside-save-feedback").textContent = "外に出た · 端末に保存済み";
       }
       renumberActivities();
       renderRecent();
@@ -3313,7 +3331,7 @@ async function initOwner() {
     $("clear-outside").addEventListener("click", () => {
       $("outside-options").querySelector("input:checked").checked = false;
       queueQuickSave("outside", null);
-      refreshEditorControls();
+      $("outside-options").querySelector("input").focus();
     });
     $("delete-entry").addEventListener("click", deleteEntry);
     $("lock").addEventListener("click", lockOwner);
