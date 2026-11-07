@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-poWzp3+Qka/eJqyhyIpG+/r7ZDy4+485nco1+7AfB5c='; style-src 'sha256-GD7HmJcBDMGNK6blGXU/lLQFmJf8cGa8Gqk9HFmLG0A='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Wndws/wbz4hQqXYtemckG1T9bRKvLQccKas6KUinVss='; style-src 'sha256-KPASlVcJ4rnIObemwyw8q7PkRc5nSuRspWLk3/wLe/A='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -621,7 +621,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .day-navigation .button, .text-button, .quick-time > summary,
 .day-tools > summary, .sync-details > summary { min-height: 44px; }
 .quick-time > summary { display: list-item; padding-block: 10px; }
-.time-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; overflow: visible; }
+.time-presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); gap: 6px; overflow: visible; }
 .time-presets .button { min-width: 0; min-height: 44px; padding-inline: 4px; }
 .time-row .field { min-width: 0; }
 .time-row input[type="time"] {
@@ -890,6 +890,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                     <button type="button" class="button secondary" data-action="昼休み" data-start="12:00" data-end="13:00" aria-pressed="false">昼休み</button>
                     <button type="button" class="button secondary" data-action="睡眠" data-start="23:00" data-end="07:00" aria-pressed="false">睡眠</button>
                     <button type="button" class="button secondary" data-action="外出" data-start="10:00" data-end="11:00" aria-pressed="false">外出</button>
+                    <button type="button" class="button secondary" data-action="食事" data-start="" data-end="" aria-pressed="false">食事</button>
                   </div>
                   <p class="quick-preview" id="quick-preview" role="status"></p>
                   <details id="quick-details" class="time-band"><summary>時間・場所を入れる（任意）</summary>
@@ -2179,9 +2180,9 @@ function bindTimePicker() {
     const previous = datesNewest(ownerState?.days ?? {}).filter((date) => date <= editDate)
       .flatMap((date) => ownerState.days[date].activities);
     for (const preset of presets) {
-      preset.dataset.defaultStart ||= preset.dataset.start;
-      preset.dataset.defaultEnd ||= preset.dataset.end;
-      const saved = previous.find((item) => item.action === preset.dataset.action && item.start && item.end && item.start !== item.end);
+      preset.dataset.defaultStart ??= preset.dataset.start;
+      preset.dataset.defaultEnd ??= preset.dataset.end;
+      const saved = preset.dataset.defaultStart && previous.find((item) => item.action === preset.dataset.action && item.start && item.end && item.start !== item.end);
       preset.dataset.start = saved?.start ?? preset.dataset.defaultStart;
       preset.dataset.end = saved?.end ?? preset.dataset.defaultEnd;
     }
