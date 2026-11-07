@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-tW0OHSH/mnIVXu7gCaQgnT8/BagOajJ+Nyrc9gDjd0k='; style-src 'sha256-KPASlVcJ4rnIObemwyw8q7PkRc5nSuRspWLk3/wLe/A='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Nw23Hzp1OFlRnjRyKdbyyHM1/gHATpI/oMWFa47Ncbc='; style-src 'sha256-eo4T+kOYT4hHl7Lkgr36vDExuED2n9v78rnt+5rxM7U='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -742,6 +742,11 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
   }
   html:has(#editor-view:not([hidden]) #day-save-bar:not([hidden])) { scroll-padding-bottom: 85px; }
 }
+
+.auto-tag { font-size: .73rem; font-weight: 600; color: var(--muted); margin-inline-start: 5px; }
+.activity-summary .activity-description { grid-row: 1; }
+.activity-summary .activity-title { grid-row: 2; font-weight: 500; color: var(--muted); }
+#quick-details-label { overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -858,33 +863,33 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
           </div>
           <form id="editor-form">
             <fieldset id="editor-fields">
-              <p class="checkin-hint">気分や外出は、当てはまるものをタップするだけで保存されます。どちらか一つだけでも大丈夫です。</p>
+              <p class="checkin-hint">残したいものだけで大丈夫です。</p>
               <fieldset class="mood-section">
-                <legend>その日の気分</legend>
+                <legend>その日の気分 <span class="auto-tag">選ぶと保存</span></legend>
                 <div class="mood-options" id="mood-options"></div>
                 <p class="muted" id="mood-save-feedback" role="status"></p>
-                <button type="button" class="text-button" id="clear-mood" hidden>選択を外す</button>
+                <button type="button" class="text-button" id="clear-mood" hidden>気分の選択を外す</button>
               </fieldset>
 
               <fieldset class="outside-section">
-                <legend>外出について</legend>
+                <legend>外出 <span class="auto-tag">選ぶと保存</span></legend>
                 <div class="outside-options" id="outside-options">
                   <label><input type="radio" name="outside" value="out"><span>外に出た</span></label>
                   <label><input type="radio" name="outside" value="home"><span>家で過ごした</span></label>
                 </div>
                 <p class="muted" id="outside-save-feedback" role="status"></p>
-                <button type="button" class="text-button" id="clear-outside" hidden>選択を外す</button>
+                <button type="button" class="text-button" id="clear-outside" hidden>外出の選択を外す</button>
               </fieldset>
 
               <section class="form-section" aria-labelledby="time-title">
-                <h3 id="time-title">したこと・過ごした時間</h3>
+                <h3 id="time-title">この日の行動</h3>
                 <p class="muted" id="time-empty">まだ行動の記録はありません。</p>
                 <div class="activity-list" id="activity-list"></div>
                 <div class="activity-undo"><span id="activity-notice" role="status"></span><button type="button" class="text-button" id="undo-activity" hidden>元に戻す</button></div>
                 <details class="quick-time" id="time-composer">
                   <summary id="add-activity">＋ したことを追加</summary>
                   <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
-                  <p class="muted">よく使う候補（もう一度押すと解除）</p>
+                  <p class="muted">候補を押すと、行動名が入ります</p>
                   <div class="time-presets" id="time-presets" aria-label="行動を選ぶ">
                     <button type="button" class="button secondary" data-action="仕事" data-start="09:00" data-end="18:00" aria-pressed="false">仕事</button>
                     <button type="button" class="button secondary" data-action="昼休み" data-start="12:00" data-end="13:00" aria-pressed="false">昼休み</button>
@@ -893,13 +898,14 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                     <button type="button" class="button secondary" data-action="食事" data-start="" data-end="" aria-pressed="false">食事</button>
                   </div>
                   <p class="quick-preview" id="quick-preview" role="status"></p>
-                  <details id="quick-details" class="time-band"><summary>時間・場所を入れる（任意）</summary>
+                  <details id="quick-details" class="time-band"><summary id="quick-details-label">時間・場所を入れる（任意）</summary>
                   <label class="field"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
                   <div class="time-row">
                     <label class="field"><span>開始</span><input type="time" id="quick-start" value="09:00" step="60"></label>
                     <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
                     <label class="field"><span>終了</span><input type="time" id="quick-end" value="18:00" step="60"></label>
                   </div>
+                  <button class="text-button" id="clear-quick-time" type="button" hidden>時刻を入れずに記録する</button>
                   <details class="time-band"><summary>帯をなぞって時間を選ぶ</summary>
                   <p class="muted" id="preset-hint">帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。</p>
                   <div id="time-paint" aria-hidden="true">
@@ -937,7 +943,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 
               <div class="save-bar" id="day-save-bar" hidden>
                 <button type="submit" class="button primary icon-text" id="save-entry">
-                  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span id="save-label">記録を保存</span>
+                  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg><span id="save-label">変更を保存</span>
                 </button>
                 <span class="save-state" id="save-state" role="status">残せる項目だけで大丈夫です</span>
 
@@ -1160,7 +1166,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
           <label class="field"><span>場所</span><input type="text" class="place" maxlength="60" placeholder="場所を入力"></label>
           <label class="field"><span>したこと（時刻は任意）</span><input type="text" class="action" maxlength="160" placeholder="したことを入力"></label>
         </div>
-        <button type="button" class="text-button danger remove-activity">この時間帯を削除</button>
+        <button type="button" class="text-button danger remove-activity">この行動を削除</button>
       </div>
     </details>
   </template>
@@ -2157,10 +2163,16 @@ function bindTimePicker() {
     const duration = (finish - start + 1440) % 1440;
     const durationLabel = (Math.floor(duration / 60) ? Math.floor(duration / 60) + "時間" : "") + (duration % 60 ? duration % 60 + "分" : "");
     const action = actionInput.value.trim();
-    $("quick-preview").textContent = action
-      ? "入力中 · " + action + (valid ? "　" + timeRange({ start: startInput.value, end: endInput.value }) + "（" + durationLabel + "）" : "")
-      : "";
-    $("add-selected-time").disabled = !action || Boolean(startInput.value && startInput.value === endInput.value);
+    const range = timeRange({ start: startInput.value, end: endInput.value });
+    const sameTime = Boolean(startInput.value && startInput.value === endInput.value);
+    $("quick-details-label").textContent = range
+      ? "時間・場所を編集 · " + range
+      : placeInput.value.trim() ? "時間・場所を編集" : "時間・場所を入れる（任意）";
+    $("clear-quick-time").hidden = !range;
+    $("quick-preview").textContent = sameTime
+      ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。"
+      : action ? "入力中 · " + action + (valid ? "（" + durationLabel + "）" : "") : "";
+    $("add-selected-time").disabled = !action || sameTime;
     for (const preset of presets) preset.setAttribute("aria-pressed", String(preset === selected));
   }
 
@@ -2216,6 +2228,12 @@ function bindTimePicker() {
       if (input === actionInput && !event.repeat) $("add-selected-time").click();
     });
   }
+  placeInput.addEventListener("input", paint);
+  $("clear-quick-time").addEventListener("click", () => {
+    startInput.value = endInput.value = "";
+    paint();
+    $("quick-details-label").focus();
+  });
   $("cancel-activity").addEventListener("click", () => {
     resetComposer();
     $("time-composer").open = false;
@@ -2549,7 +2567,7 @@ function addActivity(activity = {}, focus = false) {
     row.remove();
     renumberActivities();
     refreshEditorControls();
-    $("activity-notice").textContent = "時間帯を削除しました。";
+    $("activity-notice").textContent = "一覧から外しました。「変更を保存」で削除が確定します。";
     $("undo-activity").hidden = false;
     $("undo-activity").focus();
   });
@@ -2568,7 +2586,10 @@ function refreshEditorControls() {
   $("save-state").textContent = working === "save" ? "保存中…" : quickSaveError ? quickSaveError : pendingQuickSave ? "選択を保存しています…" : dirty ? "未保存の変更"
     : !loadedDay ? "残せる項目だけで大丈夫です"
     : ownerState?.cloud && !hasPending(ownerState) ? "共有済み" : "端末に保存済み";
-  $("save-label").textContent = working === "save" ? "保存中…" : "記録を保存";
+  const onlyMemo = draft.note !== (loadedDay?.note ?? "")
+    && JSON.stringify(draft.activities) === JSON.stringify(loadedDay?.activities ?? [])
+    && draft.mood === (loadedDay?.mood ?? null) && draft.outside === (loadedDay?.outside ?? null);
+  $("save-label").textContent = working === "save" ? "保存中…" : onlyMemo ? "メモを保存" : "変更を保存";
   const note = $("note");
   $("note-count").textContent = note.value.length + " / " + note.maxLength + "文字";
   $("clear-outside").hidden = !$("outside-options").querySelector("input:checked");
