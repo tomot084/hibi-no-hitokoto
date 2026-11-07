@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DAbz0ZfyIi5UL8sR0OPyXYFUCJUkwo1b/FFBX1VzTNg='; style-src 'sha256-eo4T+kOYT4hHl7Lkgr36vDExuED2n9v78rnt+5rxM7U='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-y3/K1TPjx27cn5Ue4tOmEB4VHblOnpWUg2rcjTdZJpU='; style-src 'sha256-8fvfIR26EO0TEeOcHjg0pQe/qqnY2YwWTWPrHQM9yOo='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -539,6 +539,10 @@ body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color:
 .activity-description { grid-column: 1; grid-row: 2; font-size: .91rem; font-weight: 650; overflow-wrap: anywhere; }
 .activity-duration { grid-column: 2; grid-row: 1; color: var(--muted); font-size: .76rem; white-space: nowrap; }
 .activity-strip { grid-column: 1 / -1; width: 100%; height: 4px; margin-top: 4px; }
+.overnight-row { padding: 12px 2px; border-bottom: 1px solid var(--line); }
+.overnight-row .activity-strip { display: block; margin-top: 8px; }
+.overnight-meta { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
+.overnight-row .timeline-action { font-weight: 650; }
 .activity-editor { padding: 6px 2px 10px; }
 .activity-undo { display: flex; align-items: center; justify-content: space-between; min-height: 0; font-size: .77rem; color: var(--muted); }
 .activity-undo:has(#undo-activity:not([hidden])) { min-height: 40px; }
@@ -883,6 +887,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 
               <section class="form-section" aria-labelledby="time-title">
                 <h3 id="time-title">この日の行動</h3>
+                <div id="overnight-activities" hidden></div>
                 <p class="muted" id="time-empty">まだ行動の記録はありません。</p>
                 <div class="activity-list" id="activity-list"></div>
                 <div class="activity-undo"><span id="activity-notice" role="status"></span><button type="button" class="text-button" id="undo-activity" hidden>元に戻す</button></div>
@@ -902,10 +907,10 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                   <div class="time-row">
                     <label class="field"><span>開始</span><input type="time" id="quick-start" value="09:00" step="60"></label>
                     <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
-                    <label class="field"><span>終了</span><input type="time" id="quick-end" value="18:00" step="60"></label>
+                    <label class="field"><span id="quick-end-label">終了</span><input type="time" id="quick-end" value="18:00" step="60"></label>
                   </div>
                   <button class="text-button" id="clear-quick-time" type="button" hidden>時刻を入れずに記録する</button>
-                  <details class="time-band"><summary>帯をなぞって時間を選ぶ</summary>
+                    <details class="time-band"><summary>帯をなぞって時間を選ぶ</summary>
                   <p class="muted" id="preset-hint">帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。</p>
                   <div id="time-paint" aria-hidden="true">
                     <div class="clock-labels"><span>0時</span><span>6時</span><span>12時</span></div>
@@ -1166,7 +1171,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
         <div class="time-row">
           <label class="field"><span>開始</span><input type="time" class="start-time" step="60"></label>
           <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
-          <label class="field"><span>終了</span><input type="time" class="end-time" step="60"></label>
+          <label class="field"><span class="end-time-label">終了</span><input type="time" class="end-time" step="60"></label>
         </div>
         <div class="activity-info">
           <label class="field"><span>場所</span><input type="text" class="place" maxlength="60" placeholder="場所を入力"></label>
@@ -1716,6 +1721,14 @@ function dateValue(date) {
   return new Date(date + "T12:00:00Z");
 }
 
+function adjacentDate(date, days) {
+  if (!validDate(date)) return null;
+  const value = dateValue(date);
+  value.setUTCDate(value.getUTCDate() + days);
+  const result = value.toISOString().slice(0, 10);
+  return validDate(result) ? result : null;
+}
+
 function displayDay(date, long = false) {
   return (long ? LONG_DATE : SHORT_DATE).format(dateValue(date));
 }
@@ -1815,19 +1828,51 @@ function sortedActivities(activities) {
   return [...activities].sort((left, right) => activityTimeKey(left).localeCompare(activityTimeKey(right)));
 }
 
+function crossesMidnight({ start, end }) {
+  return Boolean(start && end && end < start);
+}
+
+function clockMinute(time) {
+  return Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+}
+
+function durationText(minutes) {
+  const hours = Math.floor(minutes / 60);
+  return (hours ? hours + "時間" : "") + (minutes % 60 ? minutes % 60 + "分" : "");
+}
+
+function overnightActivities(days, date) {
+  const previous = adjacentDate(date, -1);
+  if (!previous) return [];
+  return [...(days[previous]?.activities ?? [])]
+    .filter((activity) => crossesMidnight(activity) && activity.end !== "00:00")
+    .sort((a, b) => a.end.localeCompare(b.end));
+}
+
 function timeRange({ start, end }) {
   if (!start && !end) return "";
   if (!start) return "〜 " + end;
   if (!end) return start + " 〜";
-  return start + " → " + (end < start ? "翌日 " : "") + end;
+  return start + " → " + (crossesMidnight({ start, end }) ? "翌日 " : "") + end;
 }
 
 function activityColor(action) {
   return { "仕事": "#52668a", "昼休み": "#a58155", "睡眠": "#8c7c9b", "外出": "#668775" }[action] ?? "#63748b";
 }
 
-function activityTimeline(activities) {
+function appendOvernightDetails(row, activity) {
+  row.append(node("p", "timeline-action", [activity.action || "行動", activity.place].filter(Boolean).join(" · ") + "（前日から）"),
+    node("p", "timeline-time", "00:00 → " + activity.end),
+    node("p", "overnight-meta", "前日 " + activity.start + "から続いています"));
+}
+
+function activityTimeline(activities, overnight) {
   const list = node("ol", "timeline");
+  for (const activity of overnight) {
+    const row = node("li");
+    appendOvernightDetails(row, activity);
+    list.append(row);
+  }
   for (const activity of sortedActivities(activities)) {
     const row = node("li");
     const time = timeRange(activity);
@@ -1841,14 +1886,16 @@ function activityTimeline(activities) {
 
 function renderDayCard(target, date, allowEdit) {
   target.replaceChildren();
-  const day = visibleDays()[date];
+  const days = visibleDays();
+  const day = days[date];
+  const overnight = overnightActivities(days, date);
   const label = date ? displayDay(date, true) : "日記";
   const heading = node("h2", "", label);
   heading.tabIndex = -1;
   target.append(node("p", "overline", "選んだ日の記録"), heading);
-  if (!day) {
+  if (!day && !overnight.length) {
     target.append(node("p", "muted", date ? "この日の記録はありません。記録がない理由や体調は分かりません。" : "日記が保存されると、ここで読めます。"));
-  } else {
+  } else if (day) {
     if (day.mood) {
       const mood = node("div", "day-mood");
       mood.append(face(day.mood), node("span", "", MOODS[day.mood - 1].label));
@@ -1862,18 +1909,26 @@ function renderDayCard(target, date, allowEdit) {
       section.append(node("h3", "", "メモ"), node("p", "day-note", day.note));
       target.append(section);
     }
-    if (day.activities.length) {
-      const section = node("section", "day-section");
-      section.append(node("h3", "", "過ごした時間"), activityTimeline(day.activities));
-      target.append(section);
-    }
+  }
+  if (overnight.length || day?.activities.length) {
+    const section = node("section", "day-section");
+    section.append(node("h3", "", "過ごした時間"), activityTimeline(day?.activities ?? [], overnight));
+    target.append(section);
   }
   if (allowEdit && date) {
     target.append(button(day ? "この日を編集" : "この日の記録を書く", "button secondary day-edit", () => {
       if (chooseEditorDate(date)) setPanel("main", true);
     }));
   }
-  if (target.id === "reader-detail" && day) {
+  if (target.id === "reader-detail" && (day || overnight.length)) {
+    const next = adjacentDate(date, 1);
+    if (next && overnightActivities(days, next).length) {
+      target.append(button("翌日の続きへ →", "text-button day-edit", () => {
+        selectedReaderDate = next;
+        renderReaderLog();
+        $("reader-detail").querySelector("h2").focus();
+      }));
+    }
     target.append(button("記録一覧へ", "text-button day-edit", () => {
       $("reader-list-title").focus();
     }));
@@ -1921,7 +1976,8 @@ function renderReaderOverview() {
   $("reader-week").replaceChildren(...dates.map((date) => {
     const day = days[date];
     const item = button("", "recent-day", () => openDate(date));
-    const label = day?.mood ? MOODS[day.mood - 1].label : day ? "気分未記録" : "記録なし";
+    const label = day?.mood ? MOODS[day.mood - 1].label : day ? "気分未記録"
+      : overnightActivities(days, date).length ? "前日から" : "記録なし";
     item.setAttribute("aria-label", displayDay(date) + "、" + label);
     item.setAttribute("aria-pressed", String(selectedReaderDate === date));
     item.append(node("span", "", date.slice(5).replace("-", "/")), day?.mood ? face(day.mood) : node("span", "recent-unrated", "—"), node("small", "", label));
@@ -1981,18 +2037,18 @@ function monthCounts(days, month) {
   return { counts, total, rated: counts.reduce((sum, count) => sum + count, 0), moodTotal, outsideOut, outsideRated };
 }
 
-function calendarDateButton(date, day, selected, current) {
+function calendarDateButton(date, day, selected, current, hasOvernight) {
   const action = button("", "calendar-day", () => selectCalendarDate(date, true));
   action.dataset.date = date;
   action.tabIndex = selected ? 0 : -1;
   action.setAttribute("aria-pressed", String(selected));
   if (current) action.setAttribute("aria-current", "date");
-  const details = day?.mood ? MOODS[day.mood - 1].label : day ? "記録あり" : "空欄";
+  const details = day?.mood ? MOODS[day.mood - 1].label : day ? "記録あり" : hasOvernight ? "前日から続く行動あり" : "空欄";
   action.setAttribute("aria-label", displayDay(date, true) + "、" + details);
   action.append(node("span", "day-number", Number(date.slice(8))));
   if (day) action.classList.add("has-entry");
   if (day?.mood) action.append(face(day.mood));
-  else action.append(node("span", day ? "calendar-indicator" : "calendar-placeholder"));
+  else action.append(node("span", day || hasOvernight ? "calendar-indicator" : "calendar-placeholder"));
   return action;
 }
 
@@ -2046,7 +2102,7 @@ function renderMonth() {
   });
   for (let day = 1; day <= last.getUTCDate(); day += 1) {
     const date = monthCursor + "-" + String(day).padStart(2, "0");
-    cells.push(calendarDateButton(date, days[date], selectedMonthDate === date, current === date));
+    cells.push(calendarDateButton(date, days[date], selectedMonthDate === date, current === date, overnightActivities(days, date).length > 0));
   }
   $("calendar-grid").replaceChildren(...cells);
   $("month-label").textContent = displayMonth(monthCursor);
@@ -2153,14 +2209,14 @@ function bindTimePicker() {
   const startInput = $("quick-start");
   const endInput = $("quick-end");
   const tracks = [$("paint-am"), $("paint-pm")];
-  const minute = (text) => Number(text.slice(0, 2)) * 60 + Number(text.slice(3));
   const clock = (value) => String(Math.floor(value / 60) % 24).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0");
 
   function paint() {
-    const start = minute(startInput.value);
-    const finish = minute(endInput.value);
+    const start = clockMinute(startInput.value);
+    const finish = clockMinute(endInput.value);
+    const overnight = crossesMidnight({ start: startInput.value, end: endInput.value });
     const valid = validTime(startInput.value) && startInput.value && validTime(endInput.value) && endInput.value && start !== finish;
-    const ranges = valid ? (finish < start ? [[0, finish], [start, 1440]] : [[start, finish]]) : [];
+    const ranges = valid ? [[start, overnight ? 1440 : finish]] : [];
     for (const [index, id] of ["selection-am", "selection-pm"].entries()) {
       const offset = index * 720;
       const rectangles = ranges.filter(([left, right]) => right > offset && left < offset + 720)
@@ -2171,17 +2227,22 @@ function bindTimePicker() {
       $(id).replaceChildren(...rectangles);
     }
     const duration = (finish - start + 1440) % 1440;
-    const durationLabel = (Math.floor(duration / 60) ? Math.floor(duration / 60) + "時間" : "") + (duration % 60 ? duration % 60 + "分" : "");
+    const durationLabel = durationText(duration);
     const action = actionInput.value.trim();
     const range = timeRange({ start: startInput.value, end: endInput.value });
     const sameTime = Boolean(startInput.value && startInput.value === endInput.value);
+    $("quick-end-label").textContent = overnight ? "終了（翌日）" : "終了";
+    $("preset-hint").textContent = overnight
+      ? "帯は開始日の分です。翌日の終了は時刻欄で変更できます。"
+      : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
     $("quick-details-label").textContent = range
       ? "時間・場所を編集 · " + range
       : placeInput.value.trim() ? "時間・場所を編集" : "時間・場所を入れる（任意）";
     $("clear-quick-time").hidden = !range;
     $("quick-preview").textContent = sameTime
       ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。"
-      : action ? "入力中 · " + action + (valid ? "（" + durationLabel + "）" : "") : "";
+      : action ? "入力中 · " + action + (valid ? "（" + durationLabel + "）" : "")
+        + (overnight ? " · " + range : "") : "";
     $("add-selected-time").disabled = !action || sameTime;
     for (const preset of presets) preset.setAttribute("aria-pressed", String(preset === selected));
   }
@@ -2540,6 +2601,33 @@ function populateMoodOptions() {
   $("mood-options").replaceChildren(...options);
 }
 
+function paintActivityStrip(strip, action, from, to) {
+  strip.replaceChildren(svgNode("rect", { width: 1440, height: 6, fill: "#e6e5e0" }));
+  if (to > from) strip.append(svgNode("rect", { x: from, width: to - from, height: 6, fill: activityColor(action) }));
+}
+
+function renderOvernightEditor() {
+  const container = $("overnight-activities");
+  const activities = overnightActivities(visibleDays(), editDate);
+  container.replaceChildren();
+  container.hidden = !activities.length;
+  if (activities.length) {
+    for (const activity of activities) {
+      const row = node("div", "overnight-row");
+      const strip = svgNode("svg", { class: "activity-strip", viewBox: "0 0 1440 6", preserveAspectRatio: "none", "aria-hidden": "true" });
+      appendOvernightDetails(row, activity);
+      paintActivityStrip(strip, activity.action, 0, clockMinute(activity.end));
+      row.append(strip);
+      container.append(row);
+    }
+    const previous = adjacentDate(editDate, -1);
+    container.append(button("前日の記録を開く", "text-button", () => {
+      if (chooseEditorDate(previous)) $("editor-title").focus();
+    }));
+  }
+  $("time-empty").hidden = activities.length > 0 || $("activity-list").children.length > 0;
+}
+
 function renderActivitySummary(row) {
   const start = row.querySelector(".start-time").value;
   const end = row.querySelector(".end-time").value;
@@ -2548,17 +2636,13 @@ function renderActivitySummary(row) {
   row.querySelector(".activity-title").textContent = timeRange({ start, end }) || "時刻なし";
   row.querySelector(".activity-description").textContent = [action || "内容を入力", place].filter(Boolean).join(" · ");
   const strip = row.querySelector(".activity-strip");
-  strip.replaceChildren(svgNode("rect", { width: 1440, height: 6, fill: "#e6e5e0" }));
-  let duration = "";
-  if (start && end && start !== end) {
-    const from = Number(start.slice(0, 2)) * 60 + Number(start.slice(3));
-    const to = Number(end.slice(0, 2)) * 60 + Number(end.slice(3));
-    const minutes = (to - from + 1440) % 1440;
-    duration = (Math.floor(minutes / 60) ? Math.floor(minutes / 60) + "時間" : "") + (minutes % 60 ? minutes % 60 + "分" : "");
-    const segments = to < from ? [[from, 1440], [0, to]] : [[from, to]];
-    for (const [left, right] of segments) strip.append(svgNode("rect", { x: left, width: right - left, height: 6, fill: activityColor(action) }));
-  }
-  row.querySelector(".activity-duration").textContent = duration;
+  const overnight = crossesMidnight({ start, end });
+  const timed = start && end && start !== end;
+  const from = timed ? clockMinute(start) : 0;
+  const to = timed ? clockMinute(end) : 0;
+  paintActivityStrip(strip, action, from, overnight ? 1440 : to);
+  row.querySelector(".end-time-label").textContent = overnight ? "終了（翌日）" : "終了";
+  row.querySelector(".activity-duration").textContent = (overnight ? "計" : "") + durationText(to - from + (overnight ? 1440 : 0));
 }
 
 function renumberActivities() {
@@ -2567,7 +2651,7 @@ function renumberActivities() {
     row.querySelector(".remove-activity").setAttribute("aria-label", "時間帯 " + (index + 1) + "を削除");
     renderActivitySummary(row);
   }
-  $("time-empty").hidden = rows.length > 0;
+  $("time-empty").hidden = rows.length > 0 || !$("overnight-activities").hidden;
   $("undo-activity").disabled = rows.length >= MAX_ACTIVITIES;
 }
 
@@ -2652,6 +2736,7 @@ function fillEditor(date) {
   for (const radio of $("outside-options").querySelectorAll("input")) radio.checked = radio.value === loadedDay?.outside;
   $("activity-list").replaceChildren();
   for (const activity of loadedDay?.activities ?? []) addActivity(activity);
+  renderOvernightEditor();
   renumberActivities();
   refreshEditorControls();
 }
@@ -2733,6 +2818,7 @@ async function persistState(next, replaceDraft = false) {
   if (next === ownerState) return;
   const box = await persistOwnerState(ownerDatabase, ownerKey, ownerBox, next);
   const preserve = !replaceDraft && (editorDirty() || activityDraftDirty());
+  const previousDays = ownerState.days;
   ownerState = next;
   ownerBox = box;
   if (!preserve && (replaceDraft || !dayEquals(loadedDay, next.days[editDate]))) fillEditor(editDate);
@@ -2740,6 +2826,8 @@ async function persistState(next, replaceDraft = false) {
   else if (!dayEquals(loadedDay, next.days[editDate])) {
     status("save-message", "この日の記録が別の端末で更新されました。入力中の内容は残しています。", true);
   }
+  const previous = adjacentDate(editDate, -1);
+  if (!dayEquals(previousDays[previous], next.days[previous])) renderOvernightEditor();
   renderRecent();
   if (displayedPanel === "month") renderMonth();
   renderOwnerConnection();
