@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-U4rysfmz4TxlYPLQyY1aFz4C8yRO8FYx6fGCpVC2tJs='; style-src 'sha256-eo4T+kOYT4hHl7Lkgr36vDExuED2n9v78rnt+5rxM7U='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DAbz0ZfyIi5UL8sR0OPyXYFUCJUkwo1b/FFBX1VzTNg='; style-src 'sha256-eo4T+kOYT4hHl7Lkgr36vDExuED2n9v78rnt+5rxM7U='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -1807,8 +1807,12 @@ function resetCalendar(date) {
   selectedMonthDate = date;
 }
 
+function activityTimeKey({ start, end }) {
+  return start || end || "99:99";
+}
+
 function sortedActivities(activities) {
-  return [...activities].sort((left, right) => (left.start || left.end || "99:99").localeCompare(right.start || right.end || "99:99"));
+  return [...activities].sort((left, right) => activityTimeKey(left).localeCompare(activityTimeKey(right)));
 }
 
 function timeRange({ start, end }) {
@@ -2437,21 +2441,28 @@ async function unlockOwner(event) {
   }
 }
 
-function editorDraft() {
-  const mood = $("mood-options").querySelector("input:checked");
-  const activities = Array.from($("activity-list").children, (row) => ({
+function activityFromRow(row) {
+  return {
     start: row.querySelector(".start-time").value,
     end: row.querySelector(".end-time").value,
     place: row.querySelector(".place").value.trim(),
     action: row.querySelector(".action").value.trim()
-  })).filter((activity) => Object.values(activity).some(Boolean));
+  };
+}
+
+function editorDraft() {
+  const mood = $("mood-options").querySelector("input:checked");
+  const activities = Array.from($("activity-list").children, activityFromRow)
+    .filter((activity) => Object.values(activity).some(Boolean));
   return { date: editDate, mood: mood ? Number(mood.value) : null, note: $("note").value.trim(), activities,
     outside: $("outside-options").querySelector("input:checked")?.value ?? null };
 }
 
 function editorDirty() {
   const original = dayWithoutRevision(loadedDay) ?? { date: editDate, mood: null, note: "", activities: [], outside: null };
-  return JSON.stringify(original) !== JSON.stringify(editorDraft());
+  const draft = editorDraft();
+  return JSON.stringify({ ...original, activities: sortedActivities(original.activities) })
+    !== JSON.stringify({ ...draft, activities: sortedActivities(draft.activities) });
 }
 
 // Quick choices commit only their own fields; unfinished notes and activities remain drafts.
@@ -2560,6 +2571,16 @@ function renumberActivities() {
   $("undo-activity").disabled = rows.length >= MAX_ACTIVITIES;
 }
 
+function insertActivityRow(row, previousNext) {
+  const list = $("activity-list");
+  const key = activityTimeKey(activityFromRow(row));
+  const next = Array.from(list.children).find((item) => {
+    const itemKey = activityTimeKey(activityFromRow(item));
+    return itemKey > key || (item === previousNext && itemKey === key);
+  });
+  list.insertBefore(row, next ?? null);
+}
+
 function addActivity(activity = {}, focus = false) {
   const row = $("activity-template").content.firstElementChild.cloneNode(true);
   row.open = focus;
@@ -2569,7 +2590,7 @@ function addActivity(activity = {}, focus = false) {
   row.querySelector(".action").value = activity.action ?? "";
   row.addEventListener("input", () => renderActivitySummary(row));
   row.querySelector(".remove-activity").addEventListener("click", () => {
-    removedActivity = { row, index: [...$("activity-list").children].indexOf(row), date: editDate };
+    removedActivity = { row, next: row.nextElementSibling, date: editDate };
     row.remove();
     renumberActivities();
     refreshEditorControls();
@@ -2578,7 +2599,7 @@ function addActivity(activity = {}, focus = false) {
     $("undo-activity").focus();
   });
   if (focus) for (const existing of $("activity-list").children) existing.open = false;
-  $("activity-list").append(row);
+  insertActivityRow(row);
   renderActivitySummary(row);
   if (focus) row.querySelector(".action").focus();
 }
@@ -2586,14 +2607,15 @@ function addActivity(activity = {}, focus = false) {
 function refreshEditorControls() {
   const dirty = Boolean(ownerKey && editorDirty());
   const draft = editorDraft();
-  const hasOtherDraft = draft.note !== (loadedDay?.note ?? "")
-    || JSON.stringify(draft.activities) !== JSON.stringify(loadedDay?.activities ?? []);
+  const activitiesChanged = JSON.stringify(sortedActivities(draft.activities))
+    !== JSON.stringify(sortedActivities(loadedDay?.activities ?? []));
+  const hasOtherDraft = draft.note !== (loadedDay?.note ?? "") || activitiesChanged;
   $("day-save-bar").hidden = !dirty || Boolean(pendingQuickSave && !hasOtherDraft && !quickSaveError);
   $("save-state").textContent = working === "save" ? "保存中…" : quickSaveError ? quickSaveError : pendingQuickSave ? "選択を保存しています…" : dirty ? "未保存の変更"
     : !loadedDay ? "残せる項目だけで大丈夫です"
     : ownerState?.cloud && !hasPending(ownerState) ? "共有済み" : "端末に保存済み";
   const onlyMemo = draft.note !== (loadedDay?.note ?? "")
-    && JSON.stringify(draft.activities) === JSON.stringify(loadedDay?.activities ?? [])
+    && !activitiesChanged
     && draft.mood === (loadedDay?.mood ?? null) && draft.outside === (loadedDay?.outside ?? null);
   $("save-label").textContent = working === "save" ? "保存中…" : onlyMemo ? "メモを保存" : "変更を保存";
   const note = $("note");
@@ -2780,10 +2802,7 @@ async function saveNewActivity(activity) {
       addActivity(activity);
       debugEvent("activity-list-restored");
       renumberActivities();
-      if (removedActivity?.date === editDate && sameActivity(Object.fromEntries(
-        [["start", ".start-time"], ["end", ".end-time"], ["place", ".place"], ["action", ".action"]]
-          .map(([key, selector]) => [key, removedActivity.row.querySelector(selector).value.trim()])
-      ))) {
+      if (removedActivity?.date === editDate && sameActivity(activityFromRow(removedActivity.row))) {
         removedActivity = undefined;
         $("undo-activity").hidden = true;
       }
@@ -3046,7 +3065,7 @@ function diagnosticReport() {
   }));
   const saved = ownerState?.days[editDate];
   const draft = editorDraft();
-  return JSON.stringify({ app: "日々の足あと", build: "2026-11-07-debug-1", at: new Date().toISOString(),
+  return JSON.stringify({ app: "日々の足あと", build: "2026-11-07-debug-2", at: new Date().toISOString(),
     viewport: { width: window.innerWidth, height: window.innerHeight, touch: navigator.maxTouchPoints > 0 },
     panel: displayedPanel, working: working || "idle", unlocked: Boolean(ownerKey),
     storage: "現在の画面が保持する保存状態（保存領域の再読込はしません）",
@@ -3176,8 +3195,8 @@ async function initOwner() {
     });
     $("undo-activity").addEventListener("click", () => {
       if (!removedActivity || removedActivity.date !== editDate || $("activity-list").children.length >= MAX_ACTIVITIES) return;
-      const { row, index } = removedActivity;
-      $("activity-list").insertBefore(row, $("activity-list").children[index] ?? null);
+      const { row, next } = removedActivity;
+      insertActivityRow(row, next);
       removedActivity = undefined;
       $("undo-activity").hidden = true;
       $("activity-notice").textContent = "元に戻しました。";
