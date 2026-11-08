@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-yhSogK+gqq/WRXF8OYB8wmhx9ymg1XXH0jZFZ5mV0lY='; style-src 'sha256-hM1UJV8ft9scMeVhF0VOBWRFeeL2WuFUKZt2DbyaMug='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-765iS42aSz5WYk1NTp+RME5CZ3KLT5T2M3sCM6HOfdg='; style-src 'sha256-Or2VPkLppEE2DgPLZNy3KJVDlh+6vIwoXBobxvNN51E='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -470,7 +470,6 @@ main { padding-bottom: max(17px, env(safe-area-inset-bottom)); }
 .time-track { fill: #dbe5d4; }
 .time-selection { fill: #638463; }
 .clock-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: .75rem; margin: 5px 0 2px; }
-.quick-preview { font-size: .85rem; font-weight: 700; margin: 8px 0; }
 
 /* A compact diary page, with the recorded day as the main surface. */
 :root {
@@ -531,7 +530,6 @@ body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color:
 .time-presets [aria-pressed="true"] { background: var(--green); border-color: var(--green); }
 .time-track { fill: #e0e3eb; }
 .time-selection { fill: #6f7fa6; }
-.quick-preview { font-variant-numeric: tabular-nums; letter-spacing: .025em; }
 .activity-list { gap: 0; }
 .activity { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0; }
 .activity-summary {
@@ -644,7 +642,6 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
   line-height: 24px;
   font-variant-numeric: tabular-nums;
 }
-.quick-preview { min-height: 2em; font-size: .87rem; overflow-wrap: anywhere; }
 @media (max-width: 760px) {
   html { scroll-padding-top: 120px; scroll-padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
   input, textarea, summary, button { scroll-margin-block: 12px; }
@@ -707,9 +704,11 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 #mood-save-feedback, #outside-save-feedback { font-size: .8rem; }
 #mood-save-feedback { margin-top: 6px; }
 #mood-save-feedback:empty, #outside-save-feedback:empty { display: none; }
-#activity-notice:not(:empty) { display: block; margin-block: 6px; }
+#activity-notice:not(:empty), #activity-saved-notice:not(:empty) { display: block; margin-block: 6px; }
+#activity-saved-notice { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
 #time-composer > summary { color: var(--green); }
-#quick-preview:empty, #activity-save-message:empty { display: none; }
+#quick-time-error:empty, #activity-save-message:empty { display: none; }
+#quick-time-error { color: var(--danger); font-size: .8rem; margin-bottom: 8px; }
 #cancel-activity { margin-top: 4px; }
 
 @media (min-width: 761px) {
@@ -755,7 +754,15 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .auto-tag { font-size: .73rem; font-weight: 600; color: var(--muted); margin-inline-start: 5px; }
 .activity-summary .activity-description { grid-row: 1; }
 .activity-summary .activity-title { grid-row: 2; font-weight: 500; color: var(--muted); }
-#quick-details-label { overflow-wrap: anywhere; }
+#quick-details-label {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px;
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--paper);
+  color: var(--green); font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+#quick-details-label::-webkit-details-marker { display: none; }
+#quick-details-label::after { content: "設定 ▾"; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+#quick-details-label[data-filled="true"]::after { content: "変更 ▾"; }
+#quick-details[open] > #quick-details-label::after { content: "閉じる ▴"; }
 </style>
 </head>
 <body>
@@ -895,10 +902,6 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 
               <section class="form-section" aria-labelledby="time-title">
                 <h3 id="time-title">この日の行動</h3>
-                <div id="overnight-activities" hidden></div>
-                <p class="muted" id="time-empty">まだ行動の記録はありません。</p>
-                <div class="activity-list" id="activity-list"></div>
-                <div class="activity-undo"><span id="activity-notice" role="status"></span><button type="button" class="text-button" id="undo-activity" hidden>元に戻す</button></div>
                 <details class="quick-time" id="time-composer">
                   <summary id="add-activity">＋ したことを追加</summary>
                   <div class="time-presets" id="time-presets" aria-label="行動を選ぶ">
@@ -909,8 +912,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                     <button type="button" class="button secondary" data-action="外出" data-start="10:00" data-end="11:00" aria-pressed="false">外出</button>
                   </div>
                   <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
-                  <p class="quick-preview" id="quick-preview" role="status"></p>
-                  <details id="quick-details" class="time-band"><summary id="quick-details-label">時間・場所を入れる（任意）</summary>
+                  <details id="quick-details" class="time-band"><summary id="quick-details-label"><span id="quick-preview">時間・場所を入れる（任意）</span></summary>
                   <label class="field"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
                   <div class="time-row">
                     <label class="field"><span>開始</span><input type="time" id="quick-start" value="09:00" step="60"></label>
@@ -929,12 +931,16 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 
                   </details>
                   </details>
+                  <p id="quick-time-error" role="status"></p>
                   <button class="button primary full" type="button" id="add-selected-time">この行動を保存</button>
                   <button class="text-button" type="button" id="cancel-activity">キャンセル</button>
                   <p class="message" id="activity-save-message" role="status"></p>
                 </details>
-
-
+                <p id="activity-saved-notice" role="status"></p>
+                <div id="overnight-activities" hidden></div>
+                <p class="muted" id="time-empty">まだ行動の記録はありません。</p>
+                <div class="activity-list" id="activity-list"></div>
+                <div class="activity-undo"><span id="activity-notice" role="status"></span><button type="button" class="text-button" id="undo-activity" hidden>元に戻す</button></div>
               </section>
               <details class="memo-details" id="memo-details">
                 <summary id="memo-label">メモを追加</summary>
@@ -2220,6 +2226,8 @@ function bindTimePicker() {
   let drag = null;
   const startInput = $("quick-start");
   const endInput = $("quick-end");
+  const composer = $("time-composer");
+  const detailsLabel = $("quick-details-label");
   const tracks = [$("paint-am"), $("paint-pm")];
   const clock = (value) => String(Math.floor(value / 60) % 24).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0");
 
@@ -2238,28 +2246,29 @@ function bindTimePicker() {
         }));
       $(id).replaceChildren(...rectangles);
     }
-    const duration = (finish - start + 1440) % 1440;
-    const durationLabel = durationText(duration);
     const action = actionInput.value.trim();
+    const place = placeInput.value.trim();
     const range = timeRange({ start: startInput.value, end: endInput.value });
     const sameTime = Boolean(startInput.value && startInput.value === endInput.value);
     $("quick-end-label").textContent = overnight ? "終了（翌日）" : "終了";
     $("preset-hint").textContent = overnight
       ? "帯は開始日の分です。翌日の終了は時刻欄で変更できます。"
       : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
-    $("quick-details-label").textContent = range
-      ? "時間・場所を編集 · " + range
-      : placeInput.value.trim() ? "時間・場所を編集" : "時間・場所を入れる（任意）";
+    const time = valid ? range + "（" + durationText((finish - start + 1440) % 1440) + "）" : range;
+    const preview = [action, time || (action || place ? "時刻なし" : ""), place].filter(Boolean).join(" · ");
+    $("quick-preview").textContent = preview || "時間・場所を入れる（任意）";
+    detailsLabel.dataset.filled = String(Boolean(preview));
     $("clear-quick-time").hidden = !range;
-    $("quick-preview").textContent = sameTime
-      ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。"
-      : action ? "入力中 · " + action + (valid ? "（" + durationLabel + "）" : "")
-        + (overnight ? " · " + range : "") : "";
+    $("quick-time-error").textContent = sameTime
+      ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。" : "";
     $("add-selected-time").disabled = !action || sameTime;
     for (const preset of presets) preset.setAttribute("aria-pressed", String(preset === selected));
   }
 
   activityDraftDirty = () => Boolean(actionInput.value.trim() || placeInput.value.trim() || startInput.value || endInput.value);
+  composer.addEventListener("toggle", () => {
+    if (composer.open) $("activity-saved-notice").textContent = "";
+  });
 
   function resetComposer() {
     selected = null;
@@ -2370,7 +2379,7 @@ function bindTimePicker() {
     if (!activity.action || !validActivity(activity) || (activity.start && activity.start === activity.end)) return;
     const saved = await saveNewActivity(activity);
     if (saved) {
-      $("time-composer").open = false;
+      composer.open = false;
       refreshTimePresets();
       $("add-activity").focus();
     }
@@ -2737,6 +2746,7 @@ function fillEditor(date) {
   removedActivity = undefined;
   $("undo-activity").hidden = true;
   $("activity-notice").textContent = "";
+  $("activity-saved-notice").textContent = "";
   loadedDay = ownerState?.days[date];
   $("editor-kicker").textContent = date === isoToday() ? "今日の記録" : "日付を選んで記録";
   $("editor-title").textContent = displayDay(date);
@@ -2910,7 +2920,7 @@ async function saveNewActivity(activity) {
         $("undo-activity").hidden = true;
       }
     }
-    $("activity-notice").textContent = activity.action + "は端末に保存済みです。一覧に表示しています。";
+    $("activity-saved-notice").textContent = activity.action + "は端末に保存済みです。一覧に表示しています。";
     refreshEditorControls();
     if (ownerState.cloud) void synchronize();
     return true;
@@ -2939,7 +2949,7 @@ async function saveNewActivity(activity) {
       renumberActivities();
       renderRecent();
       if (displayedPanel === "month") renderMonth();
-      $("activity-notice").textContent = activity.action + "を端末に保存しました。";
+      $("activity-saved-notice").textContent = activity.action + "を端末に保存しました。";
     });
     if (done && ownerState.cloud) void synchronize();
     return Boolean(done);
