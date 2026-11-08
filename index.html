@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-765iS42aSz5WYk1NTp+RME5CZ3KLT5T2M3sCM6HOfdg='; style-src 'sha256-Or2VPkLppEE2DgPLZNy3KJVDlh+6vIwoXBobxvNN51E='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-xFClnBWjpYmSeg6tsS2NqqNVD4+2B55d90kuIyvSLJA='; style-src 'sha256-I4olqdxJjDtqb7370LZXMFDYhPpxpsjMz9uKcjy3TBc='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -706,7 +706,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 #mood-save-feedback:empty, #outside-save-feedback:empty { display: none; }
 #activity-notice:not(:empty), #activity-saved-notice:not(:empty) { display: block; margin-block: 6px; }
 #activity-saved-notice { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
-#time-composer > summary { color: var(--green); }
+#time-composer > summary { color: var(--green); overflow-wrap: anywhere; }
 #quick-time-error:empty, #activity-save-message:empty { display: none; }
 #quick-time-error { color: var(--danger); font-size: .8rem; margin-bottom: 8px; }
 #cancel-activity { margin-top: 4px; }
@@ -2215,7 +2215,28 @@ function bindViews() {
 }
 
 let refreshTimePresets = () => {};
-let activityDraftDirty = () => false;
+
+function activityComposerDraft() {
+  return { start: $("quick-start").value, end: $("quick-end").value,
+    place: $("quick-place").value.trim(), action: $("quick-action").value.trim() };
+}
+
+function activityDraftDirty() {
+  return Object.values(activityComposerDraft()).some(Boolean);
+}
+
+function canSaveActivity(activity) {
+  return Boolean(activity.action && validActivity(activity) && (!activity.start || activity.start !== activity.end));
+}
+
+function refreshComposerSummary() {
+  const draft = activityComposerDraft();
+  const dirty = Object.values(draft).some(Boolean);
+  const summary = $("add-activity");
+  const label = activitySavePending ? "保存待ち：" + draft.action
+    : !$("time-composer").open && dirty ? "入力中：" + (draft.action || "したこと") : "＋ したことを追加";
+  if (summary.textContent !== label) summary.textContent = label;
+}
 
 function bindTimePicker() {
   let selected = null;
@@ -2261,13 +2282,14 @@ function bindTimePicker() {
     $("clear-quick-time").hidden = !range;
     $("quick-time-error").textContent = sameTime
       ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。" : "";
-    $("add-selected-time").disabled = !action || sameTime;
+    $("add-selected-time").disabled = !canSaveActivity(activityComposerDraft());
     for (const preset of presets) preset.setAttribute("aria-pressed", String(preset === selected));
+    refreshComposerSummary();
   }
 
-  activityDraftDirty = () => Boolean(actionInput.value.trim() || placeInput.value.trim() || startInput.value || endInput.value);
   composer.addEventListener("toggle", () => {
     if (composer.open) $("activity-saved-notice").textContent = "";
+    refreshComposerSummary();
   });
 
   function resetComposer() {
@@ -2343,7 +2365,7 @@ function bindTimePicker() {
 
   const surface = $("time-paint");
   surface.addEventListener("pointerdown", (event) => {
-    if (!event.isPrimary || event.button !== 0) return;
+    if (activitySavePending || !event.isPrimary || event.button !== 0) return;
     const anchor = position(event);
     drag = { pointer: event.pointerId, anchor, start: startInput.value, end: endInput.value };
     surface.setPointerCapture(event.pointerId);
@@ -2375,14 +2397,30 @@ function bindTimePicker() {
   startInput.addEventListener("input", paint);
   endInput.addEventListener("input", paint);
   $("add-selected-time").addEventListener("click", async () => {
-    const activity = { start: startInput.value, end: endInput.value, place: placeInput.value.trim(), action: actionInput.value.trim() };
-    if (!activity.action || !validActivity(activity) || (activity.start && activity.start === activity.end)) return;
-    const saved = await saveNewActivity(activity);
-    if (saved) {
-      composer.open = false;
-      refreshTimePresets();
-      $("add-activity").focus();
+    const activity = activityComposerDraft();
+    if (activitySavePending || !ownerKey || !canSaveActivity(activity)) return;
+    const date = editDate;
+    activitySavePending = true;
+    refreshEditorControls();
+    let saved = false;
+    try {
+      if (ownerOperationDone) status("activity-save-message", "保存待ちです。処理が終わると自動で保存します。");
+      while (ownerOperationDone) await ownerOperationDone;
+      if (!ownerKey || date !== editDate) return;
+      status("activity-save-message", "端末に保存しています…");
+      saved = await saveNewActivity(activity);
+      if (saved) {
+        composer.open = false;
+        refreshTimePresets();
+      } else {
+        composer.open = true;
+      }
+    } finally {
+      activitySavePending = false;
+      if (ownerKey) renderOwnerConnection();
     }
+    if (displayedPanel === "main") $("add-activity").focus();
+    if (saved && ownerState.cloud) void synchronize();
   });
   paint();
 }
@@ -2396,6 +2434,8 @@ let ownerGateSettings;
 let editDate;
 let loadedDay;
 let working = "";
+let ownerOperationDone;
+let activitySavePending = false;
 let syncIssue = "";
 let currentConflict;
 let removedActivity;
@@ -2732,10 +2772,12 @@ function refreshEditorControls() {
   $("clear-mood").hidden = !$("mood-options").querySelector("input:checked");
   $("delete-entry").hidden = !ownerState?.days[editDate];
   $("day-tools").hidden = !ownerState?.days[editDate];
-  $("editor-fields").disabled = working === "save";
-  $("save-entry").disabled = Boolean(working) || !dirty;
+  $("editor-fields").disabled = working === "save" || activitySavePending;
+  $("save-entry").disabled = Boolean(working) || activitySavePending || !dirty;
   $("delete-entry").disabled = Boolean(working);
-  $("entry-date").disabled = working === "save";
+  $("entry-date").disabled = working === "save" || activitySavePending;
+  for (const id of ["previous-day", "next-day", "go-today"]) $(id).disabled = activitySavePending;
+  refreshComposerSummary();
 }
 
 function fillEditor(date) {
@@ -2767,25 +2809,24 @@ function fillEditor(date) {
 }
 
 function chooseEditorDate(date) {
-  if (!validDate(date) || working === "save") return false;
+  if (!validDate(date) || working === "save" || activitySavePending) return false;
   if (date === editDate) return true;
-  if (activityDraftDirty()) {
-    if (!window.confirm("入力中の行動を取り消して、日付を移動しますか？")) return false;
-    refreshTimePresets();
-    $("time-composer").open = false;
-  }
-  if (editorDirty()) {
+  if (activityDraftDirty() || editorDirty()) {
     pendingEditorDate = date;
     $("leave-note").textContent = displayDay(editDate) + "の変更が未保存です。" + displayDay(date) + "へ移動します。";
     status("leave-message");
     $("leave-dialog").showModal();
     return false;
   }
+  switchEditorDate(date);
+  return true;
+}
+
+function switchEditorDate(date) {
   fillEditor(date);
   renderRecent();
   resetCalendar(date);
   status("save-message");
-  return true;
 }
 
 function readerUrl(repo, code) {
@@ -2824,7 +2865,7 @@ function renderOwnerConnection() {
     ? pending ? "端末の変更は、同期すると閲覧画面にも表示されます。" : "同期した全日分を、共有相手が閲覧できます。"
     : "GitHubをつなぐと、全日分を共有できます。";
   $("connect").disabled = Boolean(working) || location.protocol !== "https:";
-  for (const id of ["sync-now", "update-token", "disconnect", "lock"]) $(id).disabled = Boolean(working);
+  for (const id of ["sync-now", "update-token", "disconnect", "lock"]) $(id).disabled = Boolean(working) || activitySavePending;
   refreshEditorControls();
   if (["sync", "connect", "token"].includes(working)) syncPill("同期中", "wait");
   else if (syncIssue) syncPill("同期を確認", "error");
@@ -2860,8 +2901,9 @@ async function persistState(next, replaceDraft = false) {
 
 async function runOwnerOperation(kind, action) {
   if (working || !ownerKey) return false;
+  let release;
+  ownerOperationDone = new Promise((resolve) => { release = resolve; });
   working = kind;
-  renderOwnerConnection();
   const run = async () => {
     const current = await readItem(ownerDatabase, STATE_ID);
     if (current?.box !== ownerBox) throw new RecordConflict();
@@ -2869,6 +2911,7 @@ async function runOwnerOperation(kind, action) {
     return true;
   };
   try {
+    renderOwnerConnection();
     if (navigator.locks?.request) {
       const lockName = "hibi-no-hitokoto:" + new URL("./", location.href).pathname;
       return await navigator.locks.request(lockName, { ifAvailable: true }, (lock) => {
@@ -2879,6 +2922,8 @@ async function runOwnerOperation(kind, action) {
     return await run();
   } finally {
     working = "";
+    ownerOperationDone = undefined;
+    release();
     if (ownerKey) renderOwnerConnection();
     if (pendingQuickSave && ownerKey) quickSaveTimer = setTimeout(() => void flushQuickSave(), 0);
   }
@@ -2890,6 +2935,10 @@ function ownerError(error) {
     : "端末に保存できませんでした。ブラウザーの保存設定を確認してください。";
 }
 
+function sameActivity(left, right) {
+  return ["action", "place", "start", "end"].every((key) => left[key] === right[key]);
+}
+
 async function saveNewActivity(activity) {
   debugEvent("activity-save-request");
   if (!ownerKey || working) {
@@ -2898,16 +2947,15 @@ async function saveNewActivity(activity) {
   }
   const current = ownerState.days[editDate];
   if (!dayEquals(loadedDay, current)) {
-    status("activity-save-message", "別の端末で更新されました。入力を控え、画面を開き直してください。", true);
+    status("activity-save-message", "別の端末でこの日の記録が更新されたため、保存を止めました。入力は残っています。", true);
     return false;
   }
   const day = dayWithoutRevision(current) ?? { date: editDate, mood: null, outside: null, note: "", activities: [] };
-  if ((activity.start || activity.end) && day.activities.some((item) => ["action", "place", "start", "end"].every((key) => item[key] === activity[key]))) {
+  if ((activity.start || activity.end) && day.activities.some((item) => sameActivity(item, activity))) {
     debugEvent("activity-already-saved");
     // A committed record can be missing from the draft list (for example after
     // an uncommitted removal). A retry must reconcile the UI, not strand it.
-    const sameActivity = (item) => ["action", "place", "start", "end"].every((key) => item[key] === activity[key]);
-    if (!editorDraft().activities.some(sameActivity)) {
+    if (!editorDraft().activities.some((item) => sameActivity(item, activity))) {
       if ($("activity-list").children.length >= MAX_ACTIVITIES) {
         status("activity-save-message", "この行動は端末に保存済みです。一覧が16件あるため、編集中の行動を整理してから再度保存してください。", true);
         return false;
@@ -2915,14 +2963,13 @@ async function saveNewActivity(activity) {
       addActivity(activity);
       debugEvent("activity-list-restored");
       renumberActivities();
-      if (removedActivity?.date === editDate && sameActivity(activityFromRow(removedActivity.row))) {
+      if (removedActivity?.date === editDate && sameActivity(activityFromRow(removedActivity.row), activity)) {
         removedActivity = undefined;
         $("undo-activity").hidden = true;
       }
     }
     $("activity-saved-notice").textContent = activity.action + "は端末に保存済みです。一覧に表示しています。";
     refreshEditorControls();
-    if (ownerState.cloud) void synchronize();
     return true;
   }
   if (day.activities.length >= MAX_ACTIVITIES || $("activity-list").children.length >= MAX_ACTIVITIES) {
@@ -2951,7 +2998,6 @@ async function saveNewActivity(activity) {
       if (displayedPanel === "month") renderMonth();
       $("activity-saved-notice").textContent = activity.action + "を端末に保存しました。";
     });
-    if (done && ownerState.cloud) void synchronize();
     return Boolean(done);
   } catch (error) {
     debugEvent("activity-save-error", error);
@@ -2960,15 +3006,37 @@ async function saveNewActivity(activity) {
   }
 }
 
-async function saveEntry(event, syncAfter = true) {
+async function saveEntry(event, syncAfter = true, includeActivity = false) {
   event.preventDefault();
-  if (!ownerKey || working) return false;
-  if (activityDraftDirty()) {
+  if (!ownerKey || working || activitySavePending) return false;
+  const hasActivityDraft = activityDraftDirty();
+  if (hasActivityDraft && !includeActivity) {
+    $("time-composer").open = true;
+    refreshComposerSummary();
     status("activity-save-message", "入力中の行動を先に保存するか、キャンセルしてください。", true);
+    const saveActivity = $("add-selected-time");
+    (saveActivity.disabled ? $("add-activity") : saveActivity).focus();
     return false;
   }
-  if (!editorDirty()) return true;
+  if (!hasActivityDraft && !editorDirty()) return true;
   const draft = editorDraft();
+  if (hasActivityDraft) {
+    const activity = activityComposerDraft();
+    if (!canSaveActivity(activity)) {
+      status("save-message", "入力中の行動の名前と時刻を確認してください。", true);
+      return false;
+    }
+    const duplicate = (activity.start || activity.end) && draft.activities.some((item) => sameActivity(item, activity));
+    if (!duplicate) {
+      if (draft.activities.length >= MAX_ACTIVITIES) {
+        status("save-message", "行動は1日16件まで保存できます。", true);
+        return false;
+      }
+      draft.activities.push(activity);
+      if (activity.action === "外出" && !Object.hasOwn(pendingQuickSave?.patch ?? {}, "outside")
+        && draft.outside === (loadedDay?.outside ?? null)) draft.outside = "out";
+    }
+  }
   const empty = !draft.mood && !draft.outside && !draft.note && !draft.activities.length;
   if (!validDay(draft) && !(empty && loadedDay)) {
     status("save-message", "記録の内容を確認してください。", true);
@@ -3227,7 +3295,7 @@ async function copyField(id, label) {
 }
 
 function lockOwner() {
-  if (working || ((editorDirty() || activityDraftDirty()) && !window.confirm("保存前の入力があります。日記を閉じますか？"))) return;
+  if (working || activitySavePending || ((editorDirty() || activityDraftDirty()) && !window.confirm("保存前の入力があります。日記を閉じますか？"))) return;
   debugEvents.length = 0;
   $("debug-output").value = "";
   $("debug-output").hidden = true;
@@ -3279,30 +3347,38 @@ async function initOwner() {
       status("save-message");
     });
     const leaveDialog = $("leave-dialog");
+    let leaveSaving = false;
     leaveDialog.addEventListener("close", () => { pendingEditorDate = undefined; });
-    leaveDialog.addEventListener("cancel", (event) => { if (working === "save") event.preventDefault(); });
+    leaveDialog.addEventListener("cancel", (event) => { if (leaveSaving || working === "save") event.preventDefault(); });
     $("keep-editing").addEventListener("click", () => leaveDialog.close());
     $("discard-and-leave").addEventListener("click", () => {
       const date = pendingEditorDate;
       leaveDialog.close();
       if (!date) return;
-      fillEditor(editDate);
-      if (chooseEditorDate(date)) setPanel("main", true);
+      switchEditorDate(date);
+      setPanel("main", true);
     });
     $("save-and-leave").addEventListener("click", async (event) => {
       const date = pendingEditorDate;
-      if (!date) return;
-      if (working) { status("leave-message", "同期中です。完了してから保存できます。"); return; }
+      if (!date || leaveSaving) return;
+      leaveSaving = true;
       const controls = ["save-and-leave", "discard-and-leave", "keep-editing"];
       controls.forEach((id) => { $(id).disabled = true; });
       try {
-        const saved = await saveEntry(event, false);
+        if (ownerOperationDone) status("leave-message", "保存待ちです。処理が終わると保存して移動します。");
+        while (ownerOperationDone) await ownerOperationDone;
+        status("save-message");
+        const saved = await saveEntry(event, false, true);
         if (saved) {
           leaveDialog.close();
-          if (chooseEditorDate(date)) setPanel("main", true);
+          switchEditorDate(date);
+          setPanel("main", true);
           if (ownerState.cloud) void synchronize({ quiet: true });
         } else status("leave-message", $("save-message").textContent || "保存できませんでした。入力は残っています。", true);
-      } finally { controls.forEach((id) => { $(id).disabled = false; }); }
+      } finally {
+        leaveSaving = false;
+        controls.forEach((id) => { $(id).disabled = false; });
+      }
     });
     $("entry-date").addEventListener("change", (event) => {
       if (!chooseEditorDate(event.target.value)) event.target.value = editDate;
