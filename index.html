@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-gF19G/dhmxXRQayjuBrnZGkotUKVTOWKwT9Ry3f0ur4='; style-src 'sha256-AFnHkcAj3zYTtVbxyd6+5B7/rjC9oQJAvt37271I8Oc='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-LDWzVYoWqGxuoveux/hJQdzXo55vrjqFotUlvgbklPk='; style-src 'sha256-H1ykLTwkW3OlRPcPtQegHUfRdOJ4x5dcwEvWGXtxJv4='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -544,6 +544,12 @@ body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color:
 .activity-title { grid-column: 1; grid-row: 1; color: var(--green); font-size: .83rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .activity-description { grid-column: 1; grid-row: 2; font-size: .91rem; font-weight: 650; overflow-wrap: anywhere; }
 .activity-duration { grid-column: 2; grid-row: 1; color: var(--muted); font-size: .76rem; white-space: nowrap; }
+.activity-break-summary { grid-column: 1 / -1; }
+.activity-break-summary, .work-time-summary, .work-break-status { color: var(--muted); font-size: .8rem; }
+.work-break-control { margin-block: 8px; }
+.work-break-control .field { max-inline-size: 14em; margin-bottom: 4px; }
+.work-break-status.error { color: var(--danger); }
+.work-break-status:empty { display: none; }
 .activity-strip { grid-column: 1 / -1; width: 100%; height: 4px; margin-top: 4px; }
 .overnight-row { padding: 12px 2px; border-bottom: 1px solid var(--line); }
 .overnight-row .activity-strip { display: block; margin-top: 8px; }
@@ -601,7 +607,6 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 
 .time-selection { fill: currentColor; }
 .time-presets [data-action="仕事"][aria-pressed="true"] { background: #52668a; border-color: #52668a; }
-.time-presets [data-action="昼休み"][aria-pressed="true"] { background: #765b36; border-color: #765b36; }
 .time-presets [data-action="睡眠"][aria-pressed="true"] { background: #756580; border-color: #756580; }
 .time-presets [data-action="外出"][aria-pressed="true"] { background: #4d6d5b; border-color: #4d6d5b; }
 
@@ -922,11 +927,14 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                   <div class="time-presets" id="time-presets" aria-label="行動を選ぶ">
                     <button type="button" class="button secondary" data-action="食事" aria-pressed="false">食事</button>
                     <button type="button" class="button secondary" data-action="仕事" data-reuse-time aria-pressed="false">仕事</button>
-                    <button type="button" class="button secondary" data-action="昼休み" data-reuse-time aria-pressed="false">昼休み</button>
                     <button type="button" class="button secondary" data-action="睡眠" data-reuse-time aria-pressed="false">睡眠</button>
                     <button type="button" class="button secondary" data-action="外出" data-reuse-time aria-pressed="false">外出</button>
                   </div>
                   <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
+                  <div class="work-break-control" id="quick-work-break" hidden>
+                    <label class="field"><span>休憩の合計（分・任意）</span><input type="text" id="quick-break-minutes" inputmode="numeric" maxlength="4" placeholder="例：60" aria-describedby="quick-break-status"></label>
+                    <p class="work-break-status" id="quick-break-status" role="status"></p>
+                  </div>
                   <details id="quick-details" class="time-band"><summary id="quick-details-label"><span id="quick-preview">時間・場所を入れる（任意）</span></summary>
                   <label class="field"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
                   <div class="time-row">
@@ -1195,6 +1203,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
       <summary class="activity-summary">
         <span class="activity-title"></span><span class="activity-description"></span>
         <span class="activity-duration"></span>
+        <span class="activity-break-summary" hidden></span>
         <svg class="activity-strip" viewBox="0 0 1440 6" preserveAspectRatio="none" aria-hidden="true"></svg>
       </summary>
       <div class="activity-editor">
@@ -1202,6 +1211,10 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
           <label class="field"><span>開始</span><input type="time" class="start-time" step="60"></label>
           <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
           <label class="field"><span class="end-time-label">終了</span><input type="time" class="end-time" step="60"></label>
+        </div>
+        <div class="work-break-control" hidden>
+          <label class="field"><span>休憩の合計（分・任意）</span><input class="break-minutes" type="text" inputmode="numeric" maxlength="4" placeholder="例：60"></label>
+          <p class="work-break-status" role="status"></p>
         </div>
         <div class="activity-info">
           <label class="field"><span>場所</span><input type="text" class="place" maxlength="60" placeholder="場所を入力"></label>
@@ -1342,7 +1355,8 @@ function limitedText(value, limit) {
 function validActivity(activity) {
   return activity && validTime(activity.start) && validTime(activity.end)
     && limitedText(activity.place, 60) && limitedText(activity.action, 160)
-    && Boolean(activity.start || activity.end || activity.place || activity.action);
+    && Boolean(activity.start || activity.end || activity.place || activity.action)
+    && !workBreakIssue(activity);
 }
 
 function validDay(day) {
@@ -1874,6 +1888,53 @@ function durationText(minutes) {
   return (hours ? hours + "時間" : "") + (minutes % 60 ? minutes % 60 + "分" : "");
 }
 
+function activityMinutes({ start, end }) {
+  if (!start || !end || start === end || !validTime(start) || !validTime(end)) return null;
+  return (clockMinute(end) - clockMinute(start) + 1440) % 1440;
+}
+
+function activityWithBreak(activity, rawMinutes) {
+  const text = rawMinutes.trim().normalize("NFKC");
+  if (activity.action !== "仕事" || !text) return activity;
+  return { ...activity, breakMinutes: /^\d{1,4}$/.test(text) ? Number(text) : NaN };
+}
+
+function workBreakIssue(activity) {
+  const { breakMinutes } = activity;
+  if (breakMinutes === undefined) return "";
+  if (activity.action !== "仕事" || !Number.isInteger(breakMinutes) || breakMinutes < 0) return "休憩の合計を分単位の数字で入力してください。";
+  const total = activityMinutes(activity);
+  if (total === null) return "休憩を入れるときは開始と終了の時刻を入力してください。";
+  return breakMinutes > total ? "休憩の合計は開始から終了までの時間以内にしてください。" : "";
+}
+
+function workTimeParts(activity) {
+  const total = activityMinutes(activity);
+  if (activity.action !== "仕事" || total === null) return null;
+  if (workBreakIssue(activity)) return { duration: "時間帯 " + durationText(total), detail: "休憩の入力を確認" };
+  if (activity.breakMinutes === undefined) return { duration: "時間帯 " + durationText(total), detail: "休憩未入力" };
+  return {
+    duration: (crossesMidnight(activity) ? "全体の実働 " : "実働 ") + (durationText(total - activity.breakMinutes) || "0分"),
+    detail: "休憩 " + (durationText(activity.breakMinutes) || "0分")
+  };
+}
+
+function workTimeText(activity) {
+  const parts = workTimeParts(activity);
+  return parts ? parts.duration + " · " + parts.detail : "";
+}
+
+function renderWorkBreakInput(control, activity) {
+  const input = control.querySelector("input");
+  const message = control.querySelector(".work-break-status");
+  control.hidden = activity.action !== "仕事";
+  input.disabled = control.hidden;
+  const issue = workBreakIssue(activity);
+  input.setAttribute("aria-invalid", String(Boolean(issue)));
+  message.classList.toggle("error", Boolean(issue));
+  message.textContent = issue || workTimeText(activity);
+}
+
 function overnightActivities(days, date) {
   const previous = adjacentDate(date, -1);
   if (!previous) return [];
@@ -1908,6 +1969,8 @@ function activityTimeline(activities, overnight) {
     const time = carried ? "00:00 → " + activity.end : timeRange(activity);
     if (time) line.append(node("span", "timeline-time", time));
     row.append(line);
+    const work = carried ? "" : workTimeText(activity);
+    if (work) row.append(node("p", "work-time-summary", work));
     if (activity.place) row.append(node("p", "timeline-place", activity.place));
     if (carried) row.append(node("p", "overnight-meta", "前日 " + activity.start + "に開始"));
     list.append(row);
@@ -2251,8 +2314,8 @@ function bindViews() {
 let refreshTimePresets = () => {};
 
 function activityComposerDraft() {
-  return { start: $("quick-start").value, end: $("quick-end").value,
-    place: $("quick-place").value.trim(), action: $("quick-action").value.trim() };
+  return activityWithBreak({ start: $("quick-start").value, end: $("quick-end").value,
+    place: $("quick-place").value.trim(), action: $("quick-action").value.trim() }, $("quick-break-minutes").value);
 }
 
 function activityDraftDirty() {
@@ -2283,7 +2346,7 @@ function bindTimePicker() {
   let drag = null;
   const startInput = $("quick-start");
   const endInput = $("quick-end");
-  const inputs = [actionInput, placeInput, startInput, endInput];
+  const inputs = [actionInput, placeInput, startInput, endInput, $("quick-break-minutes")];
   const composer = $("time-composer");
   const details = $("quick-details");
   const band = $("quick-band");
@@ -2315,7 +2378,7 @@ function bindTimePicker() {
     $("preset-hint").textContent = overnight
       ? "帯は開始日の分です。翌日の終了は時刻欄で変更できます。"
       : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
-    const time = valid ? range + "（" + durationText((finish - start + 1440) % 1440) + "）" : range;
+    const time = valid && action !== "仕事" ? range + "（" + durationText((finish - start + 1440) % 1440) + "）" : range;
     const preview = [action, time || (action || place ? "時刻なし" : ""), time && !timeEdited ? "前回の時刻" : "", place]
       .filter(Boolean).join(" · ");
     $("quick-preview").textContent = preview || "時間・場所を入れる（任意）";
@@ -2323,7 +2386,9 @@ function bindTimePicker() {
     $("clear-quick-time").hidden = !range;
     $("quick-time-error").textContent = sameTime
       ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。" : "";
-    $("add-selected-time").disabled = !canSaveActivity(activityComposerDraft());
+    const draft = activityComposerDraft();
+    renderWorkBreakInput($("quick-work-break"), draft);
+    $("add-selected-time").disabled = !canSaveActivity(draft);
     for (const preset of presets) preset.setAttribute("aria-pressed", String(preset === selected));
     refreshComposerSummary();
   }
@@ -2337,7 +2402,7 @@ function bindTimePicker() {
     selected = null;
     timeEdited = false;
     drag = null;
-    actionInput.value = placeInput.value = startInput.value = endInput.value = "";
+    for (const input of inputs) input.value = "";
     details.open = band.open = false;
     status("activity-save-message");
     paint();
@@ -2382,6 +2447,7 @@ function bindTimePicker() {
     });
   }
   placeInput.addEventListener("input", paint);
+  $("quick-break-minutes").addEventListener("input", paint);
   function editTime() {
     timeEdited = true;
     paint();
@@ -2639,12 +2705,12 @@ async function unlockOwner(event) {
 }
 
 function activityFromRow(row) {
-  return {
+  return activityWithBreak({
     start: row.querySelector(".start-time").value,
     end: row.querySelector(".end-time").value,
     place: row.querySelector(".place").value.trim(),
     action: row.querySelector(".action").value.trim()
-  };
+  }, row.querySelector(".break-minutes").value);
 }
 
 function editorDraft() {
@@ -2768,11 +2834,9 @@ function renderOvernightEditor() {
 }
 
 function renderActivitySummary(row) {
-  const start = row.querySelector(".start-time").value;
-  const end = row.querySelector(".end-time").value;
-  const action = row.querySelector(".action").value.trim();
-  const place = row.querySelector(".place").value.trim();
-  row.querySelector(".activity-title").textContent = timeRange({ start, end }) || "時刻なし";
+  const activity = activityFromRow(row);
+  const { start, end, action, place } = activity;
+  row.querySelector(".activity-title").textContent = timeRange(activity) || "時刻なし";
   row.querySelector(".activity-description").textContent = [action || "内容を入力", place].filter(Boolean).join(" · ");
   const strip = row.querySelector(".activity-strip");
   const overnight = crossesMidnight({ start, end });
@@ -2781,7 +2845,12 @@ function renderActivitySummary(row) {
   const to = timed ? clockMinute(end) : 0;
   paintActivityStrip(strip, action, from, overnight ? 1440 : to);
   row.querySelector(".end-time-label").textContent = overnight ? "終了（翌日）" : "終了";
-  row.querySelector(".activity-duration").textContent = (overnight ? "計" : "") + durationText(to - from + (overnight ? 1440 : 0));
+  const work = workTimeParts(activity);
+  row.querySelector(".activity-duration").textContent = work?.duration ?? ((overnight ? "計" : "") + durationText(to - from + (overnight ? 1440 : 0)));
+  const breakSummary = row.querySelector(".activity-break-summary");
+  breakSummary.textContent = work?.detail ?? "";
+  breakSummary.hidden = !work;
+  renderWorkBreakInput(row.querySelector(".work-break-control"), activity);
 }
 
 function renumberActivities() {
@@ -2811,7 +2880,9 @@ function addActivity(activity = {}, focus = false) {
   row.querySelector(".end-time").value = activity.end ?? "";
   row.querySelector(".place").value = activity.place ?? "";
   row.querySelector(".action").value = activity.action ?? "";
+  row.querySelector(".break-minutes").value = activity.breakMinutes ?? "";
   row.addEventListener("input", () => renderActivitySummary(row));
+  row.addEventListener("change", () => renderActivitySummary(row));
   row.querySelector(".remove-activity").addEventListener("click", () => {
     removedActivity = { row, next: row.nextElementSibling, date: editDate };
     row.remove();
@@ -3010,9 +3081,15 @@ function ownerError(error) {
     : "端末に保存できませんでした。ブラウザーの保存設定を確認してください。";
 }
 
-function sameActivity(left, right) {
+function sameActivitySlot(left, right) {
   return ["action", "place", "start", "end"].every((key) => left[key] === right[key]);
 }
+
+function sameActivity(left, right) {
+  return sameActivitySlot(left, right) && left.breakMinutes === right.breakMinutes;
+}
+
+const EDIT_EXISTING_WORK = "同じ時間帯の仕事があります。一覧の「編集」から休憩の合計を変更できます。";
 
 async function saveNewActivity(activity) {
   debugEvent("activity-save-request");
@@ -3026,6 +3103,11 @@ async function saveNewActivity(activity) {
     return false;
   }
   const day = dayWithoutRevision(current) ?? { date: editDate, mood: null, outside: null, note: "", activities: [] };
+  if (activity.action === "仕事" && activity.start && activity.end
+    && day.activities.some((item) => sameActivitySlot(item, activity) && !sameActivity(item, activity))) {
+    status("activity-save-message", EDIT_EXISTING_WORK, true);
+    return false;
+  }
   if ((activity.start || activity.end) && day.activities.some((item) => sameActivity(item, activity))) {
     debugEvent("activity-already-saved");
     // A committed record can be missing from the draft list (for example after
@@ -3098,7 +3180,12 @@ async function saveEntry(event, syncAfter = true, includeActivity = false) {
   if (hasActivityDraft) {
     const activity = activityComposerDraft();
     if (!canSaveActivity(activity)) {
-      status("save-message", "入力中の行動の名前と時刻を確認してください。", true);
+      status("save-message", workBreakIssue(activity) || "入力中の行動の名前と時刻を確認してください。", true);
+      return false;
+    }
+    if (activity.action === "仕事" && activity.start && activity.end
+      && draft.activities.some((item) => sameActivitySlot(item, activity) && !sameActivity(item, activity))) {
+      status("save-message", EDIT_EXISTING_WORK, true);
       return false;
     }
     const duplicate = (activity.start || activity.end) && draft.activities.some((item) => sameActivity(item, activity));
@@ -3114,7 +3201,8 @@ async function saveEntry(event, syncAfter = true, includeActivity = false) {
   }
   const empty = !draft.mood && !draft.outside && !draft.note && !draft.activities.length;
   if (!validDay(draft) && !(empty && loadedDay)) {
-    status("save-message", "記録の内容を確認してください。", true);
+    const issue = draft.activities.map(workBreakIssue).find(Boolean);
+    status("save-message", issue || "記録の内容を確認してください。", true);
     return;
   }
   const current = ownerState.days[draft.date];
@@ -3155,7 +3243,7 @@ async function deleteEntry() {
 function conflictDescription(day) {
   if (!day) return "この日の記録を削除";
   const mood = day.mood ? "気分 " + MOODS[day.mood - 1].label : "";
-  const times = sortedActivities(day.activities).map((activity) => [timeRange(activity), activity.place, activity.action].filter(Boolean).join("　"));
+  const times = sortedActivities(day.activities).map((activity) => [timeRange(activity), activity.place, activity.action, workTimeText(activity)].filter(Boolean).join("　"));
   const outside = day.outside === "out" ? "外に出た" : day.outside === "home" ? "家で過ごした" : "";
   return [mood, outside, day.note, ...times].filter(Boolean).join("\n");
 }
