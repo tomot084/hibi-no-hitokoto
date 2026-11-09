@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-64rfIRUkiO6IchfXy6lfEmhvfaQTIzlShhR0JtbJsko='; style-src 'sha256-aHKp18Vmvbnh36QGBN5AyuNZPqjuykk6u7ZnjLMYGDU='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-64rfIRUkiO6IchfXy6lfEmhvfaQTIzlShhR0JtbJsko='; style-src 'sha256-DwB9H/sURil3iScMf8c73vPDJvmxxHLZJd8JK2iQBqQ='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -52,10 +52,8 @@ a { color: var(--green); text-underline-offset: .21em; }
 }
 .skip-link:focus { transform: none; }
 .site-header { min-height: 76px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.brand, .header-actions { display: flex; align-items: center; gap: 10px; }
-.brand { font-size: 1rem; font-weight: 750; letter-spacing: .07em; white-space: nowrap; }
-.brand-mark { width: 38px; height: 38px; flex: 0 0 38px; }
-.header-actions { justify-content: end; }
+.brand { color: var(--green-dark); font-size: 1rem; font-weight: 650; letter-spacing: .035em; line-height: 1.35; overflow-wrap: anywhere; }
+.header-actions { display: flex; align-items: center; justify-content: end; gap: 10px; }
 .mode-pill, .status-pill, .count-pill {
   display: inline-flex;
   align-items: center;
@@ -440,8 +438,6 @@ main { padding-bottom: max(17px, env(safe-area-inset-bottom)); }
 }
 @media (max-width: 390px) {
   :root { --gutter: 12px; }
-  .brand { gap: 8px; font-size: .86rem; letter-spacing: .035em; }
-  .brand-mark { width: 34px; height: 34px; flex-basis: 34px; }
   .header-actions { gap: 3px; }
   .header-actions .mode-pill { padding-inline: 7px; }
   .header-actions #lock { padding-inline: 5px; font-size: .74rem; }
@@ -491,13 +487,7 @@ main { padding-bottom: max(17px, env(safe-area-inset-bottom)); }
   --shadow: none;
 }
 body { background: var(--canvas); }
-.site-header { min-height: 68px; border-bottom: 1px solid #d9dad7; margin-bottom: 16px; }
-.brand { font-weight: 760; letter-spacing: .04em; }
-.brand-mark {
-  display: grid; place-items: center; width: 31px; height: 33px; flex-basis: 31px;
-  color: var(--paper); background: var(--ink); border-radius: 2px;
-  font-family: "Yu Mincho", serif; font-size: 18px; font-weight: 500;
-}
+.site-header { min-height: 56px; border-bottom: 1px solid #d9dad7; margin-bottom: 16px; }
 .hero { display: block; min-height: 0; padding: 18px 0 27px; margin-bottom: 0; background: none; border: 0; border-radius: 0; }
 .hero h1 { font-family: inherit; font-size: 2rem; font-weight: 650; letter-spacing: .02em; }
 .hero .overline { font-size: .68rem; color: var(--muted); }
@@ -579,7 +569,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .day-card h2 { font-size: 1.45rem; }
 .site-footer { text-align: left; font-size: .72rem; }
 @media (max-width: 760px) {
-  .site-header { min-height: 60px; margin-bottom: 7px; }
+  .site-header { min-height: 52px; margin-bottom: 7px; }
   .hero { padding: 14px 0 20px; }
   .hero h1 { font-size: 1.7rem; }
   .journal-bar { gap: 0; padding-bottom: 7px; }
@@ -603,7 +593,6 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
   .editor, .panel { padding: 14px; }
   .editor-top h2 { font-size: 1.12rem; }
   .nav { gap: 18px; }
-  .brand-mark { width: 28px; height: 30px; flex-basis: 28px; }
   .save-bar { padding-inline: 12px; gap: 7px; }
 }
 
@@ -782,10 +771,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 <body>
   <a class="skip-link" href="#main">本文へ移動</a>
   <header class="site-header frame">
-    <div class="brand">
-<span class="brand-mark" aria-hidden="true">日</span>
-      <span>日々の足あと</span>
-    </div>
+    <div class="brand">日々の足あと</div>
     <div class="header-actions">
       <span class="mode-pill" id="mode">自分の日記</span>
       <button class="button quiet icon-text" type="button" id="lock" hidden aria-label="日記を閉じる">
