@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-UjkBpHx/FSeyqqLkTaVpw1G0/lvG/BH50fco2I32ZX0='; style-src 'sha256-aHKp18Vmvbnh36QGBN5AyuNZPqjuykk6u7ZnjLMYGDU='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-64rfIRUkiO6IchfXy6lfEmhvfaQTIzlShhR0JtbJsko='; style-src 'sha256-aHKp18Vmvbnh36QGBN5AyuNZPqjuykk6u7ZnjLMYGDU='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -2091,10 +2091,12 @@ function outsideSummary(days) {
 }
 
 function renderReaderOverview() {
-  $("reader-overview").hidden = Boolean(legacySnapshot);
+  const overview = $("reader-overview");
+  overview.hidden = Boolean(legacySnapshot);
   if (legacySnapshot) return;
   const days = visibleDays();
   const today = isoToday();
+  overview.dataset.date = today;
   const end = dateValue(today);
   const dates = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(end);
@@ -2113,6 +2115,10 @@ function renderReaderOverview() {
     item.append(node("span", "", date.slice(5).replace("-", "/")), day?.mood ? face(day.mood) : node("span", "recent-unrated", "—"), node("small", "", label));
     return item;
   }));
+}
+
+function refreshReaderCalendarIfNeeded() {
+  if (readerSnapshot && !legacySnapshot && $("reader-overview").dataset.date !== isoToday()) renderReaderOverview();
 }
 
 function renderReaderLog() {
@@ -2188,8 +2194,9 @@ function renderTrendRow(days, month) {
     $("trend-list").querySelector('[aria-pressed="true"]')?.focus();
   });
   action.setAttribute("aria-pressed", String(month === monthCursor));
-  const labels = counts.map((count, index) => MOODS[index].label + " " + count + "日");
-  action.setAttribute("aria-label", displayMonth(month) + "、" + labels.join("、") + "、外出 " + outsideOut + "日、外出の記録 " + outsideRated + "日");
+  const labels = rated ? counts.flatMap((count, index) => count ? [MOODS[index].label + " " + count + "日"] : []) : ["気分は未記録"];
+  const outside = outsideRated ? "外出 " + outsideOut + "日 / 記録 " + outsideRated + "日" : "外出状況は未記録";
+  action.setAttribute("aria-label", [displayMonth(month), ...labels, outside].join("、"));
   const svg = svgNode("svg", { viewBox: "0 0 100 8", preserveAspectRatio: "none", "aria-hidden": "true" });
   svg.append(svgNode("rect", { x: 0, y: 0, width: 100, height: 8, fill: "#e6e9df" }));
   let offset = 0;
@@ -2200,7 +2207,7 @@ function renderTrendRow(days, month) {
       offset += width;
     }
   }
-  action.append(node("span", "", displayMonth(month)), svg, node("span", "trend-count", "外出 " + outsideOut + "日 / 記録 " + outsideRated + "日"));
+  action.append(node("span", "", displayMonth(month)), svg, node("span", "trend-count", outside));
   return action;
 }
 
@@ -3093,6 +3100,11 @@ function sameActivity(left, right) {
 
 const EDIT_EXISTING_WORK = "同じ時間帯の仕事があります。一覧の「編集」から休憩の合計を変更できます。";
 
+function shouldMarkOutside(activity, savedOutside, draftOutside) {
+  return activity.action === "外出" && (savedOutside ?? null) === null && (draftOutside ?? null) === null
+    && !Object.hasOwn(pendingQuickSave?.patch ?? {}, "outside");
+}
+
 async function saveNewActivity(activity) {
   debugEvent("activity-save-request");
   if (!ownerKey || working) {
@@ -3135,8 +3147,7 @@ async function saveNewActivity(activity) {
     status("activity-save-message", "行動は1日16件まで保存できます。", true);
     return false;
   }
-  const markOutside = activity.action === "外出" && !Object.hasOwn(pendingQuickSave?.patch ?? {}, "outside")
-    && editorDraft().outside === day.outside;
+  const markOutside = shouldMarkOutside(activity, day.outside, editorDraft().outside);
   const record = { ...day, outside: markOutside ? "out" : day.outside, activities: [...day.activities, activity], rev: crypto.randomUUID() };
   try {
     const done = await runOwnerOperation("save", async () => {
@@ -3197,8 +3208,7 @@ async function saveEntry(event, syncAfter = true, includeActivity = false) {
         return false;
       }
       draft.activities.push(activity);
-      if (activity.action === "外出" && !Object.hasOwn(pendingQuickSave?.patch ?? {}, "outside")
-        && draft.outside === (loadedDay?.outside ?? null)) draft.outside = "out";
+      if (shouldMarkOutside(activity, loadedDay?.outside, draft.outside)) draft.outside = "out";
     }
   }
   const empty = !draft.mood && !draft.outside && !draft.note && !draft.activities.length;
@@ -3635,6 +3645,7 @@ let readerEnvelope;
 let readerPendingUpdate;
 let readerRefreshRequest;
 let rememberReader = false;
+let readerRemembered = false;
 let readerWork = false;
 let readerGeneration = 0;
 let lastReaderCheck = 0;
@@ -3645,14 +3656,19 @@ function readerCacheId() {
 
 async function rememberSession(text) {
   if (!rememberReader) return;
+  const generation = readerGeneration;
   try {
     readerDatabase ??= await openVault();
-    if (!readerKey || !rememberReader) return;
+    if (generation !== readerGeneration || !readerKey || !rememberReader) return;
     await writeCache(readerDatabase, readerCacheId(), { key: readerKey, text });
+    if (generation !== readerGeneration) return;
+    readerRemembered = true;
+    $("lock").hidden = false;
   } catch {
-    status("top-message", "この端末ではコードを記憶できませんでした。次に開くときもコードを入力してください。", true);
+    if (generation !== readerGeneration) return;
+    status("top-message", readerRemembered ? "この端末に記憶した記録を更新できませんでした。"
+      : "この端末ではコードを記憶できませんでした。次に開くときもコードを入力してください。", true);
     rememberReader = false;
-    $("lock-label").textContent = "閉じる";
   }
 }
 
@@ -3669,8 +3685,7 @@ function showReader(snapshot) {
   $("reader-link-state").hidden = true;
   $("reader-gate").hidden = true;
   $("journal").hidden = false;
-  $("lock").hidden = false;
-  $("lock-label").textContent = rememberReader ? "記憶を消す" : "閉じる";
+  $("lock").hidden = !readerRemembered;
   $("refresh-reader").hidden = Boolean(legacySnapshot);
   $("site-footer").hidden = Boolean(legacySnapshot);
   $("site-footer").textContent = "同じ閲覧URLから、GitHub上の最新の記録を開けます。";
@@ -3724,6 +3739,7 @@ function markReaderRefreshInteractive(request) {
 
 async function refreshReader({ background = false } = {}) {
   if (legacySnapshot || !readerKey) return;
+  refreshReaderCalendarIfNeeded();
   if (readerWork) {
     if (!background && readerRefreshRequest) markReaderRefreshInteractive(readerRefreshRequest);
     return;
@@ -3837,16 +3853,33 @@ async function unlockReader(event, linkCode = null) {
 }
 
 async function lockReader() {
+  const control = $("lock");
+  if (!readerRemembered || control.disabled) return;
+  control.disabled = true;
   readerGeneration += 1;
+  const wasRemembering = rememberReader;
+  rememberReader = false;
+  readerWork = true;
+  readerRefreshRequest = undefined;
+  try {
+    await writeCache(readerDatabase, readerCacheId(), null);
+  } catch {
+    rememberReader = wasRemembering;
+    readerWork = false;
+    control.disabled = false;
+    $("refresh-reader").disabled = false;
+    status("top-message", "記憶を消せませんでした。もう一度お試しください。", true);
+    return;
+  }
+  readerRemembered = false;
   readerKey = undefined;
   readerSnapshot = undefined;
   readerEnvelope = undefined;
   setReaderPendingUpdate(undefined);
-  readerRefreshRequest = undefined;
-  rememberReader = false;
   readerWork = false;
   $("journal").hidden = true;
-  $("lock").hidden = true;
+  control.hidden = true;
+  control.disabled = false;
   $("site-footer").hidden = true;
   $("reader-list").replaceChildren();
   $("reader-detail").replaceChildren();
@@ -3861,20 +3894,9 @@ async function lockReader() {
   $("month-average").textContent = "";
   status("top-message");
   $("refresh-reader").disabled = false;
-  if (readerLinkCode !== null) {
-    showReaderLinkState("記録を閉じました。", true);
-    $("retry-reader-link").focus();
-  } else {
-    $("reader-gate").hidden = false;
-    $("reader-code").focus();
-  }
-  if (readerDatabase) {
-    try {
-      await writeCache(readerDatabase, readerCacheId(), null);
-    } catch {
-      status("reader-gate-message", "コードの記憶を消せませんでした。ブラウザーのサイトデータから削除できます。", true);
-    }
-  }
+  $("reader-gate").hidden = false;
+  status("reader-gate-message", "この端末の記憶を消しました。");
+  $("reader-code").focus();
 }
 
 async function initReader() {
@@ -3885,7 +3907,8 @@ async function initReader() {
   $("hero-note").textContent = legacySnapshot ? "共有された日の記録を開けます。" : "日付や週ごとの変化を確認できます。";
   $("nav-main-label").textContent = "日々の記録";
   $("nav-share").hidden = true;
-  $("lock").setAttribute("aria-label", "閲覧を閉じて、端末のコードの記憶を消す");
+  $("lock-label").textContent = "記憶を消す";
+  $("lock").setAttribute("aria-label", "端末に記憶した閲覧コードを消す");
   $("remember-row").hidden = Boolean(legacySnapshot);
   if (legacySnapshot ? !/^[A-Za-z0-9_-]{39,40000}$/.test(legacySnapshot) : !readerRepo) {
     systemStatus("閲覧リンクを確認できませんでした。届いたリンク全体を開いてください。");
@@ -3896,7 +3919,9 @@ async function initReader() {
   $("refresh-reader").addEventListener("click", () => void refreshReader());
   $("lock").addEventListener("click", lockReader);
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && Date.now() - lastReaderCheck >= 300000) void refreshReader({ background: true });
+    if (document.hidden) return;
+    if (Date.now() - lastReaderCheck >= 300000) void refreshReader({ background: true });
+    else refreshReaderCalendarIfNeeded();
   });
   // The fragment stays out of the HTTP request. Keep it in the URL so
   // bookmarks and links opened on a different device remain usable.
@@ -3912,6 +3937,7 @@ async function initReader() {
         const snapshot = await openArchive(cached.key, readerRepo, cached.text);
         readerKey = cached.key;
         rememberReader = true;
+        readerRemembered = true;
         readerEnvelope = cached.text;
         systemStatus("");
         showReader(snapshot);
