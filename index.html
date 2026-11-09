@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-xFClnBWjpYmSeg6tsS2NqqNVD4+2B55d90kuIyvSLJA='; style-src 'sha256-I4olqdxJjDtqb7370LZXMFDYhPpxpsjMz9uKcjy3TBc='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-LyKi4yEuXLcyY2g4AJYEUU6A4snnqgVxi36AduI+AvI='; style-src 'sha256-w3HgVtjPVXlNPYM14DQAhlvC7xI266BHZ7b5xl6xiGc='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -294,7 +294,6 @@ legend { padding: 0; }
 #reader-more { margin-top: 11px; }
 .day-card h2 { margin-bottom: 8px; }
 .day-card h3 { margin-bottom: 4px; }
-.day-card .overline { margin-bottom: 4px; }
 .day-checkin { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
 .day-mood, .outside-detail { display: inline-flex; align-items: center; gap: 5px; font-size: .82rem; font-weight: 680; }
 .day-mood .mood-face { width: 28px; height: 28px; }
@@ -566,7 +565,6 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .week-row { background: transparent; border-radius: 0; border-bottom: 1px solid var(--line); padding: 10px 0; }
 .week-row p { line-height: 1.9; }
 .day-card { border-top: 3px solid var(--green); }
-.day-card > .overline { display: none; }
 .day-card h2 { font-size: 1.45rem; }
 .site-footer { text-align: left; font-size: .72rem; }
 @media (max-width: 760px) {
@@ -671,8 +669,8 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .trend-row > svg { grid-column: 1 / -1; grid-row: 2; }
 .trend-count { grid-column: 2; grid-row: 1; }
 
-/* The shared entry point shows time context before individual entries. */
-.reader-overview { grid-column: 1 / -1; border-top: 3px solid var(--green); }
+.reader-record-label { margin-bottom: 4px; color: var(--muted); font-size: .78rem; font-weight: 700; }
+.reader-overview { border-top: 3px solid var(--green); }
 .reader-overview h2 { font-size: 1.25rem; }
 #reader-window { font-size: .82rem; margin-top: 6px; }
 .recent-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 16px; }
@@ -681,11 +679,6 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .recent-day .mood-face { width: 29px; height: 29px; }
 .recent-day small { font-size: .72rem; overflow-wrap: anywhere; }
 .recent-unrated { height: 29px; color: var(--muted); }
-.reader-life { margin-top: 18px; }
-.reader-life h3 { font-size: .88rem; margin-bottom: 8px; }
-.life-entry { display: grid; gap: 4px; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: transparent; padding: 12px 0; min-height: 44px; font-size: .86rem; }
-.life-entry strong { font-size: .78rem; color: var(--muted); }
-.life-entry span { overflow-wrap: anywhere; }
 .month-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .review-numbers { margin-top: 12px; border-top: 1px solid var(--line); }
 .review-numbers summary, .week-numbers summary { min-height: 44px; padding-block: 10px; font-size: .78rem; color: var(--muted); }
@@ -724,8 +717,8 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
   }
   #editor-view .entry-list button { padding-inline: 8px; }
   #reader-view:has(.reader-overview:not([hidden])) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
-    grid-template-areas: "overview detail" "index detail";
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    grid-template-areas: "detail overview" "detail index";
     grid-template-rows: auto 1fr;
   }
   #reader-view:has(.reader-overview:not([hidden])) .reader-overview { grid-area: overview; }
@@ -735,7 +728,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
   .day-note { max-inline-size: 42em; line-height: 1.8; overflow-wrap: anywhere; }
   .reader-overview .recent-days { gap: 4px; }
   .reader-overview .recent-day { min-width: 0; }
-  .entry-list button, .life-entry, .recent-day { scroll-margin-block: 12px; }
+  .entry-list button, .recent-day { scroll-margin-block: 12px; }
   .mood-choice:has(input:focus-visible), .outside-options label:has(input:focus-visible) {
     outline: 3px solid var(--green);
     outline-offset: 3px;
@@ -995,17 +988,16 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
       </div>
 
       <div class="workspace reader-layout" id="reader-view" hidden>
+        <article class="panel day-card" id="reader-detail" aria-label="選んだ日の記録"></article>
         <section class="panel reader-overview" id="reader-overview" aria-labelledby="reader-overview-title">
-          <h2 id="reader-overview-title" tabindex="-1">最近のようす</h2>
+          <h2 id="reader-overview-title">直近7日</h2>
           <p class="muted" id="reader-window"></p>
           <p class="review-note">記録のない日は、体調の良し悪しを示しません。書かれた内容だけを表示しています。</p>
           <div class="recent-days" id="reader-week"></div>
-          <div id="reader-life" class="reader-life"></div>
         </section>
-        <article class="panel day-card" id="reader-detail" aria-label="選んだ日の記録"></article>
         <section class="panel compact journal-index" aria-labelledby="reader-list-title">
           <div class="panel-top">
-            <div><p class="overline">閲覧専用</p><h2 id="reader-list-title" tabindex="-1">日々の記録</h2></div>
+            <h2 id="reader-list-title" tabindex="-1">記録一覧</h2>
             <span class="count-pill" id="reader-count"></span>
           </div>
           <p class="muted" id="reader-empty">保存された日記が、ここに並びます。</p>
@@ -1902,7 +1894,7 @@ function outsideLabel(value) {
   return value === "out" ? "外に出た" : value === "home" ? "家で過ごした" : "未記録";
 }
 
-function renderDayCard(target, date, allowEdit) {
+function renderDayCard(target, date, allowEdit, latest = false) {
   target.replaceChildren();
   const days = visibleDays();
   const day = days[date];
@@ -1910,7 +1902,8 @@ function renderDayCard(target, date, allowEdit) {
   const label = date ? displayDay(date, true) : "日記";
   const heading = node("h2", "", label);
   heading.tabIndex = -1;
-  target.append(node("p", "overline", "選んだ日の記録"), heading);
+  if (latest) target.append(node("p", "reader-record-label", "最後の記録"));
+  target.append(heading);
   if (!day && !overnight.length) {
     target.append(node("p", "muted", date ? "この日の記録はありません。記録がない理由や体調は分かりません。" : "日記が保存されると、ここで読めます。"));
   } else {
@@ -1939,11 +1932,7 @@ function renderDayCard(target, date, allowEdit) {
   if (target.id === "reader-detail" && (day || overnight.length)) {
     const next = adjacentDate(date, 1);
     if (next && overnightActivities(days, next).length) {
-      target.append(button("翌日の続きへ →", "text-button day-edit", () => {
-        selectedReaderDate = next;
-        renderReaderLog();
-        $("reader-detail").querySelector("h2").focus();
-      }));
+      target.append(button("翌日の続きへ →", "text-button day-edit", () => selectReaderDate(next)));
     }
     target.append(button("記録一覧へ", "text-button day-edit", () => {
       $("reader-list-title").focus();
@@ -1972,6 +1961,19 @@ function entryItem(day, selected, choose, compact = false) {
   return row;
 }
 
+function focusReaderRecord(scroll = false) {
+  const heading = $("reader-detail").querySelector("h2");
+  if (!heading) return;
+  heading.focus({ preventScroll: true });
+  if (scroll) $("reader-detail").scrollIntoView({ block: "start" });
+}
+
+function selectReaderDate(date) {
+  selectedReaderDate = date;
+  renderReaderLog();
+  focusReaderRecord(true);
+}
+
 function renderReaderOverview() {
   $("reader-overview").hidden = Boolean(legacySnapshot);
   if (legacySnapshot) return;
@@ -1983,15 +1985,10 @@ function renderReaderOverview() {
     date.setUTCDate(date.getUTCDate() - 6 + index);
     return date.toISOString().slice(0, 10);
   });
-  $("reader-window").textContent = displayDay(dates[0]) + "〜" + displayDay(today) + " · 直近7日";
-  const openDate = (date) => {
-    selectedReaderDate = date;
-    renderReaderLog();
-    $("reader-detail").querySelector("h2").focus();
-  };
+  $("reader-window").textContent = displayDay(dates[0]) + "〜" + displayDay(today);
   $("reader-week").replaceChildren(...dates.map((date) => {
     const day = days[date];
-    const item = button("", "recent-day", () => openDate(date));
+    const item = button("", "recent-day", () => selectReaderDate(date));
     const label = day?.mood ? MOODS[day.mood - 1].label : day ? "気分未記録"
       : overnightActivities(days, date).length ? "前日から" : "記録なし";
     item.setAttribute("aria-label", displayDay(date) + "、" + label);
@@ -1999,29 +1996,15 @@ function renderReaderOverview() {
     item.append(node("span", "", date.slice(5).replace("-", "/")), day?.mood ? face(day.mood) : node("span", "recent-unrated", "—"), node("small", "", label));
     return item;
   }));
-  const entries = dates.slice().reverse().map((date) => days[date]).filter((day) => day && (day.note || day.activities.length || day.outside));
-  const rows = entries.slice(0, 3).map((day) => {
-    const item = button("", "life-entry", () => openDate(day.date));
-    const detail = [day.outside === "out" ? "外に出た" : day.outside === "home" ? "家で過ごした" : "",
-      ...sortedActivities(day.activities).map((a) => [timeRange(a), a.action, a.place].filter(Boolean).join(" ")), day.note].filter(Boolean).join(" · ");
-    item.append(node("strong", "", displayDay(day.date)), node("span", "", detail.length > 110 ? detail.slice(0, 110) + "…" : detail));
-    return item;
-  });
-  $("reader-life").replaceChildren(node("h3", "", "記録された過ごし方"), ...rows);
-  if (!rows.length) $("reader-life").append(node("p", "muted", "この7日間の生活の記録はありません。気分だけの記録も、上の顔から確認できます。"));
 }
 
 function renderReaderLog() {
   const days = visibleDays();
   const dates = datesNewest(days);
   if (!validDate(selectedReaderDate)) selectedReaderDate = dates[0];
+  renderDayCard($("reader-detail"), selectedReaderDate, false, Boolean(dates[0] && selectedReaderDate === dates[0] && !legacySnapshot));
   renderReaderOverview();
-  renderDayCard($("reader-detail"), selectedReaderDate, false);
-  const rows = dates.slice(0, readerLimit).map((date) => entryItem(days[date], date === selectedReaderDate, () => {
-    selectedReaderDate = date;
-    renderReaderLog();
-    $("reader-detail").querySelector("h2").focus();
-  }));
+  const rows = dates.slice(0, readerLimit).map((date) => entryItem(days[date], date === selectedReaderDate, () => selectReaderDate(date)));
   $("reader-list").replaceChildren(...rows);
   $("reader-count").textContent = dates.length + "日分";
   $("reader-empty").hidden = Boolean(dates.length);
@@ -2191,7 +2174,10 @@ function renderMonth() {
 }
 
 function bindViews() {
-  $("nav-main").addEventListener("click", () => setPanel("main"));
+  $("nav-main").addEventListener("click", () => {
+    setPanel("main");
+    if (isReader) focusReaderRecord(true);
+  });
   $("nav-month").addEventListener("click", () => setPanel("month"));
   $("nav-share").addEventListener("click", () => setPanel("share"));
   $("previous-month").addEventListener("click", () => changeCalendarMonth(moveMonth(monthCursor, -1)));
@@ -3489,9 +3475,9 @@ async function rememberSession(text) {
   }
 }
 
-function renderReaderStatus() {
+function renderReaderStatus(stale = false) {
   if (legacySnapshot) syncPill("共有時点の記録");
-  else syncPill(TIME_FORMAT.format(new Date(readerSnapshot.updatedAt)) + " 更新");
+  else syncPill("共有データ更新 " + TIME_FORMAT.format(new Date(readerSnapshot.updatedAt)), stale ? "wait" : "");
 }
 
 function showReader(snapshot) {
@@ -3540,7 +3526,7 @@ async function refreshReader() {
     await rememberSession(text);
   } catch (error) {
     if (generation !== readerGeneration) return;
-    syncPill("前回の記録", "wait");
+    renderReaderStatus(true);
     status("top-message", error.message + " 前回の記録を表示しています。", true);
   } finally {
     if (generation === readerGeneration) {
@@ -3584,7 +3570,7 @@ async function unlockReader(event) {
     $("reader-gate-form").reset();
     status("reader-gate-message");
     showReader(snapshot);
-    (legacySnapshot ? $("reader-detail").querySelector("h2") : $("reader-overview-title")).focus({ preventScroll: true });
+    focusReaderRecord();
     await rememberSession(readerEnvelope);
   } catch (error) {
     status("reader-gate-message", error.message, true);
@@ -3612,7 +3598,6 @@ async function lockReader() {
   $("trend-list").replaceChildren();
   $("week-list").replaceChildren();
   $("reader-week").replaceChildren();
-  $("reader-life").replaceChildren();
   $("month-average").textContent = "";
   status("top-message");
   $("refresh-reader").disabled = false;
