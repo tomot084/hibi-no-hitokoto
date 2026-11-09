@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-cxcPSjfLGwRsP/dEXXK+6aTbrKGGxfjz0XcroJayxww='; style-src 'sha256-jlWdMp4jKFfWTyxI7Alkmi9iWC/AdrHZPowyl3f8mTY='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Zh/wK59pD9NA5r/Qo7XakDUdog1q9feTP3KJnyAuKBk='; style-src 'sha256-fWN/f2QZydrfzY5AUbFebNwHI0/3NB4124GAS+tirtw='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -260,7 +260,8 @@ legend { padding: 0; }
 .activity-list { display: grid; gap: 8px; }
 .activity-list:not(:empty) { margin-bottom: 9px; }
 .activity { min-width: 0; padding: 8px 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: #f9fbf6; }
-.activity-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.activity-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 8px; min-height: 44px; }
+.activity-heading h3 { margin: 0; }
 .activity-title { font-variant-numeric: tabular-nums; }
 .time-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; }
 .time-row .field, .activity-info .field { margin: 0; }
@@ -712,9 +713,10 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 #time-composer > summary { color: var(--green); overflow-wrap: anywhere; }
 #quick-time-error:empty, #activity-save-message:empty { display: none; }
 #quick-time-error { color: var(--danger); font-size: .8rem; margin-bottom: 8px; }
-#quick-night-option { margin-block: 8px 12px; }
-#quick-night-option .check-row { margin: 0; min-height: 44px; }
-#quick-night-range { font-size: .8rem; }
+#quick-night-option { margin: 0 0 12px; }
+#quick-night-option .check-row { margin: 0; }
+.sleep-date { display: block; color: var(--muted); font-size: .75rem; font-weight: 500; }
+.overnight-total { color: var(--muted); font-size: .8rem; }
 #cancel-activity { margin-top: 4px; }
 
 @media (min-width: 761px) {
@@ -912,7 +914,10 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
               </fieldset>
 
               <section class="form-section" aria-labelledby="time-title">
-                <h3 id="time-title">この日の行動</h3>
+                <div class="activity-heading">
+                  <h3 id="time-title">この日の行動</h3>
+                  <button type="button" class="text-button" id="log-last-night">昨夜の睡眠を記録</button>
+                </div>
                 <details class="quick-time" id="time-composer">
                   <summary id="add-activity">＋ したことを追加</summary>
                   <div class="time-presets" id="time-presets" aria-label="行動を選ぶ">
@@ -927,12 +932,15 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                     <p class="work-break-status" id="quick-break-status" role="status"></p>
                   </div>
                   <details id="quick-details" class="time-band"><summary id="quick-details-label"><span id="quick-preview">時間・場所を入れる（任意）</span></summary>
-                  <label class="field"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
                   <div class="time-row">
-                    <label class="field"><span>開始</span><input type="time" id="quick-start" step="60"></label>
+                    <label class="field"><span><span id="quick-start-label">開始</span><small class="sleep-date" id="quick-start-date" hidden></small></span><input type="time" id="quick-start" step="60"></label>
                     <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
-                    <label class="field"><span id="quick-end-label">終了</span><input type="time" id="quick-end" step="60"></label>
+                    <label class="field"><span><span id="quick-end-label">終了</span><small class="sleep-date" id="quick-end-date" hidden></small></span><input type="time" id="quick-end" step="60"></label>
                   </div>
+                  <div id="quick-night-option" hidden>
+                    <label class="check-row"><input type="checkbox" id="quick-previous-night"><span>前日の夜から</span></label>
+                  </div>
+                  <label class="field"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
                   <button class="text-button" id="clear-quick-time" type="button" hidden>時刻を入れずに記録する</button>
                     <details class="time-band" id="quick-band"><summary>帯をなぞって時間を選ぶ</summary>
                   <p class="muted" id="preset-hint">帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。</p>
@@ -945,10 +953,6 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 
                   </details>
                   </details>
-                  <div id="quick-night-option" hidden>
-                    <label class="check-row"><input type="checkbox" id="quick-previous-night"><span>前日の夜から</span></label>
-                    <p class="muted" id="quick-night-range"></p>
-                  </div>
                   <p id="quick-time-error" role="status"></p>
                   <button class="button primary full" type="button" id="add-selected-time">この行動を保存</button>
                   <button class="text-button" type="button" id="cancel-activity">キャンセル</button>
@@ -1940,10 +1944,11 @@ function overnightActivities(days, date) {
     .sort((a, b) => a.end.localeCompare(b.end));
 }
 
-function timeRange({ start, end }) {
+function timeRange({ start, end }, fromPrevious = false) {
   if (!start && !end) return "";
   if (!start) return "〜 " + end;
   if (!end) return start + " 〜";
+  if (fromPrevious) return "前日 " + start + " → " + end;
   return start + " → " + (crossesMidnight({ start, end }) ? "翌日 " : "") + end;
 }
 
@@ -1952,9 +1957,17 @@ function activityColor(action) {
 }
 
 function appendOvernightDetails(row, activity) {
-  row.append(node("p", "timeline-action", [activity.action || "行動", activity.place].filter(Boolean).join(" · ") + "（前日から）"),
-    node("p", "timeline-time", "00:00 → " + activity.end),
-    node("p", "overnight-meta", "前日 " + activity.start + "から続いています"));
+  const title = [activity.action || "行動", activity.place].filter(Boolean).join(" · ");
+  if (activity.action === "睡眠") {
+    const line = node("div", "timeline-line");
+    line.append(node("span", "timeline-time", timeRange(activity, true)),
+      node("span", "overnight-total", "計" + durationText(activityMinutes(activity))));
+    row.append(node("p", "timeline-action", title), line);
+  } else {
+    row.append(node("p", "timeline-action", title + "（前日から）"),
+      node("p", "timeline-time", "00:00 → " + activity.end),
+      node("p", "overnight-meta", "前日 " + activity.start + "から続いています"));
+  }
 }
 
 function activityTimeline(activities, overnight) {
@@ -1962,14 +1975,16 @@ function activityTimeline(activities, overnight) {
   const append = (activity, carried = false) => {
     const row = node("li");
     const line = node("div", "timeline-line");
-    line.append(node("span", "timeline-action", (activity.action || "行動") + (carried ? "（前日から）" : "")));
-    const time = carried ? "00:00 → " + activity.end : timeRange(activity);
+    const overnightSleep = activity.action === "睡眠" && crossesMidnight(activity);
+    line.append(node("span", "timeline-action", (activity.action || "行動") + (carried && !overnightSleep ? "（前日から）" : "")));
+    const time = carried && !overnightSleep ? "00:00 → " + activity.end : timeRange(activity, carried);
     if (time) line.append(node("span", "timeline-time", time));
+    if (overnightSleep) line.append(node("span", "overnight-total", "計" + durationText(activityMinutes(activity))));
     row.append(line);
     const work = carried ? "" : workTimeText(activity);
     if (work) row.append(node("p", "work-time-summary", work));
     if (activity.place) row.append(node("p", "timeline-place", activity.place));
-    if (carried) row.append(node("p", "overnight-meta", "前日 " + activity.start + "に開始"));
+    if (carried && !overnightSleep) row.append(node("p", "overnight-meta", "前日 " + activity.start + "に開始"));
     list.append(row);
   };
   for (const activity of overnight) append(activity, true);
@@ -2338,9 +2353,17 @@ function composerActivityDate(activity) {
   return ($("quick-previous-night").checked && previousNightDate(activity)) || editDate;
 }
 
+function canSaveComposer(activity) {
+  return canSaveActivity(activity) && (activity.action !== "睡眠" || !$("quick-previous-night").checked
+    || Boolean(activity.start && activity.end));
+}
+
 function refreshComposerSummary() {
   const draft = activityComposerDraft();
   const dirty = Object.values(draft).some(Boolean);
+  const shortcut = $("log-last-night");
+  shortcut.hidden = dirty || !adjacentDate(editDate, -1);
+  shortcut.textContent = editDate === isoToday() ? "昨夜の睡眠を記録" : "前夜の睡眠を記録";
   const summary = $("add-activity");
   const label = activitySavePending ? "保存待ち：" + draft.action
     : !$("time-composer").open && dirty ? "入力中：" + (draft.action || "したこと") : "＋ したことを追加";
@@ -2386,29 +2409,34 @@ function bindTimePicker() {
     const place = placeInput.value.trim();
     const range = timeRange({ start: startInput.value, end: endInput.value });
     const sameTime = Boolean(startInput.value && startInput.value === endInput.value);
-    $("quick-end-label").textContent = overnight ? "終了（翌日）" : "終了";
     $("preset-hint").textContent = overnight
       ? "帯は開始日の分です。翌日の終了は時刻欄で変更できます。"
       : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
-    const time = valid && action !== "仕事" ? range + "（" + durationText((finish - start + 1440) % 1440) + "）" : range;
-    const preview = [action, time || (action || place ? "時刻なし" : ""), time && !timeEdited ? "前回の時刻" : "", place]
-      .filter(Boolean).join(" · ");
-    $("quick-preview").textContent = preview || "時間・場所を入れる（任意）";
-    detailsLabel.dataset.filled = String(Boolean(preview));
     $("clear-quick-time").hidden = !range;
     $("quick-time-error").textContent = sameTime
       ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。" : "";
     const draft = activityComposerDraft();
-    const previous = previousNightDate(draft);
-    $("quick-night-option").hidden = !previous;
-    if (previous) {
-      const date = composerActivityDate(draft);
-      const next = adjacentDate(date, 1);
-      $("quick-night-range").textContent = displayDay(date) + " " + draft.start + " → "
-        + (next ? displayDay(next) : "翌日") + " " + draft.end;
+    const sleep = action === "睡眠";
+    const date = composerActivityDate(draft);
+    const endDate = overnight ? adjacentDate(date, 1) : date;
+    const showSleepDates = sleep && valid && Boolean(date && endDate);
+    $("quick-start-label").textContent = sleep ? "寝た時刻" : "開始";
+    $("quick-end-label").textContent = sleep ? "起きた時刻" : overnight ? "終了（翌日）" : "終了";
+    for (const [id, day] of [["quick-start-date", date], ["quick-end-date", endDate]]) {
+      $(id).hidden = !showSleepDates;
+      $(id).textContent = showSleepDates ? displayDay(day) : "";
     }
+    $("quick-night-option").hidden = !previousNightDate(draft);
+    const sleepRange = showSleepDates && overnight
+      ? displayDay(date) + " " + draft.start + " → " + displayDay(endDate) + " " + draft.end : range;
+    const time = valid && action !== "仕事" ? sleepRange + "（" + durationText((finish - start + 1440) % 1440) + "）" : sleepRange;
+    const preview = [time || (sleep ? "寝た時刻・起きた時刻" : ""), time && !timeEdited ? "前回の時刻" : "", place]
+      .filter(Boolean).join(" · ");
+    $("quick-preview").textContent = preview || "時間・場所を入れる（任意）";
+    detailsLabel.dataset.filled = String(Boolean(preview));
+    $("add-selected-time").textContent = sleep ? "睡眠を保存" : "この行動を保存";
     renderWorkBreakInput($("quick-work-break"), draft);
-    $("add-selected-time").disabled = !canSaveActivity(draft);
+    $("add-selected-time").disabled = !canSaveComposer(draft);
     for (const preset of presets) preset.setAttribute("aria-pressed", String(preset === selected));
     refreshComposerSummary();
   }
@@ -2450,10 +2478,23 @@ function bindTimePicker() {
         startInput.value = selected?.dataset.start ?? "";
         endInput.value = selected?.dataset.end ?? "";
       }
+      if (actionInput.value === "睡眠") details.open = true;
+      else $("quick-previous-night").checked = false;
       status("activity-save-message");
       paint();
     });
   }
+
+  $("log-last-night").addEventListener("click", () => {
+    if (activityDraftDirty() || activitySavePending) return;
+    selected = presets.find((preset) => preset.dataset.action === "睡眠");
+    actionInput.value = "睡眠";
+    timeEdited = true;
+    $("quick-previous-night").checked = true;
+    composer.open = details.open = true;
+    paint();
+    detailsLabel.focus();
+  });
 
   actionInput.addEventListener("input", () => {
     if (selected && actionInput.value.trim() !== selected.dataset.action) selected = null;
@@ -2476,6 +2517,7 @@ function bindTimePicker() {
   }
   $("clear-quick-time").addEventListener("click", () => {
     startInput.value = endInput.value = "";
+    $("quick-previous-night").checked = false;
     editTime();
     $("quick-details-label").focus();
   });
@@ -2563,7 +2605,7 @@ function bindTimePicker() {
   }
   $("add-selected-time").addEventListener("click", async () => {
     const activity = activityComposerDraft();
-    if (activitySavePending || !ownerKey || !canSaveActivity(activity)) return;
+    if (activitySavePending || !ownerKey || !canSaveComposer(activity)) return;
     const date = editDate;
     const recordDate = composerActivityDate(activity);
     activitySavePending = true;
@@ -2844,10 +2886,12 @@ function renderOvernightEditor() {
   if (activities.length) {
     for (const activity of activities) {
       const row = node("div", "overnight-row");
-      const strip = svgNode("svg", { class: "activity-strip", viewBox: "0 0 1440 6", preserveAspectRatio: "none", "aria-hidden": "true" });
       appendOvernightDetails(row, activity);
-      paintActivityStrip(strip, activity.action, 0, clockMinute(activity.end));
-      row.append(strip);
+      if (activity.action !== "睡眠") {
+        const strip = svgNode("svg", { class: "activity-strip", viewBox: "0 0 1440 6", preserveAspectRatio: "none", "aria-hidden": "true" });
+        paintActivityStrip(strip, activity.action, 0, clockMinute(activity.end));
+        row.append(strip);
+      }
       container.append(row);
     }
     const previous = adjacentDate(editDate, -1);
@@ -2868,7 +2912,8 @@ function renderActivitySummary(row) {
   const timed = start && end && start !== end;
   const from = timed ? clockMinute(start) : 0;
   const to = timed ? clockMinute(end) : 0;
-  paintActivityStrip(strip, action, from, overnight ? 1440 : to);
+  strip.hidden = overnight && action === "睡眠";
+  if (!strip.hidden) paintActivityStrip(strip, action, from, overnight ? 1440 : to);
   row.querySelector(".end-time-label").textContent = overnight ? "終了（翌日）" : "終了";
   const work = workTimeParts(activity);
   row.querySelector(".activity-duration").textContent = work?.duration ?? ((overnight ? "計" : "") + durationText(to - from + (overnight ? 1440 : 0)));
@@ -3293,7 +3338,7 @@ async function saveEntry(event, syncAfter = true, includeActivity = false) {
   let nightRecord;
   if (hasActivityDraft) {
     const activity = activityComposerDraft();
-    if (!canSaveActivity(activity)) {
+    if (!canSaveComposer(activity)) {
       status("save-message", workBreakIssue(activity) || "入力中の行動の名前と時刻を確認してください。", true);
       return false;
     }
