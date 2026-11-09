@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-LDWzVYoWqGxuoveux/hJQdzXo55vrjqFotUlvgbklPk='; style-src 'sha256-H1ykLTwkW3OlRPcPtQegHUfRdOJ4x5dcwEvWGXtxJv4='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-UjkBpHx/FSeyqqLkTaVpw1G0/lvG/BH50fco2I32ZX0='; style-src 'sha256-aHKp18Vmvbnh36QGBN5AyuNZPqjuykk6u7ZnjLMYGDU='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -270,13 +270,15 @@ legend { padding: 0; }
 .activity-info { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
 .save-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 11px; margin-top: 18px; }
 .save-bar .primary { flex: 1 1 160px; }
-.entry-list { display: grid; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.entry-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; list-style: none; margin: 0; padding: 0; }
+.entry-list > li { min-inline-size: 0; }
 .entry-list button {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+  min-inline-size: 0;
   min-height: 48px;
   padding: 7px 9px;
   border: 1px solid var(--line);
@@ -1739,11 +1741,11 @@ async function syncRemote(state, resolution) {
 const $ = (id) => document.getElementById(id);
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MOODS = [
-  { label: "とてもつらい", face: "#eadbd8", bar: "#ab746c", mouth: "M11 24q5-6 10 0" },
-  { label: "つらい", face: "#f0e1d6", bar: "#c48e6a", mouth: "M11 23q5-3 10 0" },
+  { label: "良くない", face: "#eadbd8", bar: "#ab746c", mouth: "M11 24q5-6 10 0" },
+  { label: "少し良くない", face: "#f0e1d6", bar: "#c48e6a", mouth: "M11 23q5-3 10 0" },
   { label: "ふつう", face: "#eee9d8", bar: "#c6b48b", mouth: "M12 22h8" },
-  { label: "いい", face: "#e3ebd6", bar: "#9dad77", mouth: "M11 20q5 5 10 0" },
-  { label: "とてもいい", face: "#f4e2ad", bar: "#60865b", mouth: "M10 19h12q-6 11-12 0Z" }
+  { label: "少し良い", face: "#e3ebd6", bar: "#9dad77", mouth: "M11 20q5 5 10 0" },
+  { label: "良い", face: "#f4e2ad", bar: "#60865b", mouth: "M10 19h12q-6 11-12 0Z" }
 ];
 
 const SHORT_DATE = new Intl.DateTimeFormat("ja-JP", { month: "long", day: "numeric", weekday: "short", timeZone: "UTC" });
@@ -3816,7 +3818,7 @@ async function unlockReader(event, linkCode = null) {
     $("reader-gate-form").reset();
     status("reader-gate-message");
     showReader(snapshot);
-    focusReaderRecord();
+    if (event) focusReaderRecord();
     await rememberSession(readerEnvelope);
   } catch (error) {
     if (!linked) status("reader-gate-message", error.message, true);
@@ -3890,7 +3892,7 @@ async function initReader() {
     return;
   }
   $("reader-gate-form").addEventListener("submit", unlockReader);
-  $("retry-reader-link").addEventListener("click", () => void unlockReader(null, readerLinkCode));
+  $("retry-reader-link").addEventListener("click", (event) => void unlockReader(event, readerLinkCode));
   $("refresh-reader").addEventListener("click", () => void refreshReader());
   $("lock").addEventListener("click", lockReader);
   document.addEventListener("visibilitychange", () => {
