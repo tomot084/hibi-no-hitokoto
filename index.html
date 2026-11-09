@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-64rfIRUkiO6IchfXy6lfEmhvfaQTIzlShhR0JtbJsko='; style-src 'sha256-DwB9H/sURil3iScMf8c73vPDJvmxxHLZJd8JK2iQBqQ='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-cxcPSjfLGwRsP/dEXXK+6aTbrKGGxfjz0XcroJayxww='; style-src 'sha256-jlWdMp4jKFfWTyxI7Alkmi9iWC/AdrHZPowyl3f8mTY='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -712,6 +712,9 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 #time-composer > summary { color: var(--green); overflow-wrap: anywhere; }
 #quick-time-error:empty, #activity-save-message:empty { display: none; }
 #quick-time-error { color: var(--danger); font-size: .8rem; margin-bottom: 8px; }
+#quick-night-option { margin-block: 8px 12px; }
+#quick-night-option .check-row { margin: 0; min-height: 44px; }
+#quick-night-range { font-size: .8rem; }
 #cancel-activity { margin-top: 4px; }
 
 @media (min-width: 761px) {
@@ -942,6 +945,10 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 
                   </details>
                   </details>
+                  <div id="quick-night-option" hidden>
+                    <label class="check-row"><input type="checkbox" id="quick-previous-night"><span>前日の夜から</span></label>
+                    <p class="muted" id="quick-night-range"></p>
+                  </div>
                   <p id="quick-time-error" role="status"></p>
                   <button class="button primary full" type="button" id="add-selected-time">この行動を保存</button>
                   <button class="text-button" type="button" id="cancel-activity">キャンセル</button>
@@ -1208,6 +1215,8 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
           <label class="field"><span>場所</span><input type="text" class="place" maxlength="60" placeholder="場所を入力"></label>
           <label class="field"><span>したこと（時刻は任意）</span><input type="text" class="action" maxlength="160" placeholder="したことを入力"></label>
         </div>
+        <button type="button" class="text-button move-previous-night" hidden></button>
+        <p class="message move-night-message" role="status"></p>
         <button type="button" class="text-button danger remove-activity">この行動を削除</button>
       </div>
     </details>
@@ -2321,6 +2330,14 @@ function canSaveActivity(activity) {
   return Boolean(activity.action && validActivity(activity) && (!activity.start || activity.start !== activity.end));
 }
 
+function previousNightDate(activity) {
+  return activity.action === "睡眠" && crossesMidnight(activity) ? adjacentDate(editDate, -1) : null;
+}
+
+function composerActivityDate(activity) {
+  return ($("quick-previous-night").checked && previousNightDate(activity)) || editDate;
+}
+
 function refreshComposerSummary() {
   const draft = activityComposerDraft();
   const dirty = Object.values(draft).some(Boolean);
@@ -2382,6 +2399,14 @@ function bindTimePicker() {
     $("quick-time-error").textContent = sameTime
       ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。" : "";
     const draft = activityComposerDraft();
+    const previous = previousNightDate(draft);
+    $("quick-night-option").hidden = !previous;
+    if (previous) {
+      const date = composerActivityDate(draft);
+      const next = adjacentDate(date, 1);
+      $("quick-night-range").textContent = displayDay(date) + " " + draft.start + " → "
+        + (next ? displayDay(next) : "翌日") + " " + draft.end;
+    }
     renderWorkBreakInput($("quick-work-break"), draft);
     $("add-selected-time").disabled = !canSaveActivity(draft);
     for (const preset of presets) preset.setAttribute("aria-pressed", String(preset === selected));
@@ -2398,6 +2423,7 @@ function bindTimePicker() {
     timeEdited = false;
     drag = null;
     for (const input of inputs) input.value = "";
+    $("quick-previous-night").checked = false;
     details.open = band.open = false;
     status("activity-save-message");
     paint();
@@ -2442,6 +2468,7 @@ function bindTimePicker() {
     });
   }
   placeInput.addEventListener("input", paint);
+  $("quick-previous-night").addEventListener("change", paint);
   $("quick-break-minutes").addEventListener("input", paint);
   function editTime() {
     timeEdited = true;
@@ -2454,7 +2481,8 @@ function bindTimePicker() {
   });
   $("cancel-activity").addEventListener("click", () => {
     const draft = activityDraftDirty() ? {
-      values: inputs.map((input) => input.value), selected, timeEdited, detailsOpen: details.open, bandOpen: band.open
+      values: inputs.map((input) => input.value), selected, timeEdited, detailsOpen: details.open, bandOpen: band.open,
+      previousNight: $("quick-previous-night").checked
     } : cancelledDraft;
     resetComposer();
     composer.open = false;
@@ -2478,6 +2506,7 @@ function bindTimePicker() {
     composer.open = true;
     details.open = draft.detailsOpen;
     band.open = draft.bandOpen;
+    $("quick-previous-night").checked = draft.previousNight;
     paint();
     $("add-activity").focus();
   });
@@ -2536,6 +2565,7 @@ function bindTimePicker() {
     const activity = activityComposerDraft();
     if (activitySavePending || !ownerKey || !canSaveActivity(activity)) return;
     const date = editDate;
+    const recordDate = composerActivityDate(activity);
     activitySavePending = true;
     refreshEditorControls();
     let saved = false;
@@ -2544,7 +2574,7 @@ function bindTimePicker() {
       while (ownerOperationDone) await ownerOperationDone;
       if (!ownerKey || date !== editDate) return;
       status("activity-save-message", "端末に保存しています…");
-      saved = await saveNewActivity(activity);
+      saved = await saveNewActivity(activity, recordDate);
       if (saved) {
         composer.open = false;
         refreshTimePresets();
@@ -2846,6 +2876,10 @@ function renderActivitySummary(row) {
   breakSummary.textContent = work?.detail ?? "";
   breakSummary.hidden = !work;
   renderWorkBreakInput(row.querySelector(".work-break-control"), activity);
+  const previous = previousNightDate(activity);
+  const move = row.querySelector(".move-previous-night");
+  move.hidden = !previous;
+  move.textContent = previous ? displayDay(previous) + "の夜に移す" : "";
 }
 
 function renumberActivities() {
@@ -2878,6 +2912,7 @@ function addActivity(activity = {}, focus = false) {
   row.querySelector(".break-minutes").value = activity.breakMinutes ?? "";
   row.addEventListener("input", () => renderActivitySummary(row));
   row.addEventListener("change", () => renderActivitySummary(row));
+  row.querySelector(".move-previous-night").addEventListener("click", () => void moveSleepToPreviousDay(row));
   row.querySelector(".remove-activity").addEventListener("click", () => {
     removedActivity = { row, next: row.nextElementSibling, date: editDate };
     row.remove();
@@ -3091,12 +3126,90 @@ function shouldMarkOutside(activity, savedOutside, draftOutside) {
     && !Object.hasOwn(pendingQuickSave?.patch ?? {}, "outside");
 }
 
-async function saveNewActivity(activity) {
+function previousNightRecord(date, activity) {
+  const current = ownerState.days[date];
+  const day = dayWithoutRevision(current) ?? { date, mood: null, outside: null, note: "", activities: [] };
+  if (day.activities.some((item) => sameActivity(item, activity))) return current;
+  if (day.activities.length >= MAX_ACTIVITIES) return null;
+  return { ...day, activities: [...day.activities, activity], rev: crypto.randomUUID() };
+}
+
+async function savePreviousNight(activity, date) {
+  const record = previousNightRecord(date, activity);
+  if (!record) {
+    status("activity-save-message", "前日の行動が16件あるため、追加できません。", true);
+    return false;
+  }
+  if (record === ownerState.days[date]) {
+    renderOvernightEditor();
+    status("activity-saved-notice", "前日の睡眠は保存済みです。");
+    return true;
+  }
+  try {
+    const done = await runOwnerOperation("save", async () => {
+      const days = { ...ownerState.days, [date]: record };
+      await persistState({ ...ownerState, days });
+      status("activity-saved-notice", displayDay(date) + "の夜の睡眠を保存しました。");
+    });
+    return Boolean(done);
+  } catch (error) {
+    status("activity-save-message", ownerError(error) + " 入力内容は残っています。", true);
+    return false;
+  }
+}
+
+async function moveSleepToPreviousDay(row) {
+  const message = row.querySelector(".move-night-message");
+  message.classList.add("error");
+  if (working || activitySavePending) {
+    message.textContent = "処理が終わってから、もう一度お試しください。";
+    return;
+  }
+  if (editorDirty() || activityDraftDirty()) {
+    message.textContent = "入力中の変更を保存してから、睡眠の日付を移してください。";
+    return;
+  }
+  const source = ownerState.days[editDate];
+  const activity = activityFromRow(row);
+  const previous = previousNightDate(activity);
+  if (!previous || !source || !dayEquals(loadedDay, source)) {
+    message.textContent = "この日の記録が更新されました。最新の記録を確認してください。";
+    return;
+  }
+  const index = source.activities.findIndex((item) => sameActivity(item, activity));
+  if (index === -1) {
+    message.textContent = "この日の記録が更新されました。最新の記録を確認してください。";
+    return;
+  }
+  const destination = previousNightRecord(previous, activity);
+  if (!destination || destination === ownerState.days[previous]) {
+    message.textContent = destination ? "前日に同じ睡眠があります。移動する前に前日の記録を確認してください。"
+      : "前日の行動が16件あるため、移動できません。";
+    return;
+  }
+  try {
+    const done = await runOwnerOperation("save", async () => {
+      const remaining = { ...source, activities: source.activities.filter((_, i) => i !== index), rev: crypto.randomUUID() };
+      const days = { ...ownerState.days, [previous]: destination };
+      if (validDay(remaining)) days[source.date] = remaining;
+      else delete days[source.date];
+      await persistState({ ...ownerState, days }, true);
+      status("activity-saved-notice", "睡眠を" + displayDay(previous) + "の夜に移しました。");
+      $("add-activity").focus();
+    });
+    if (done && ownerState.cloud) void synchronize();
+  } catch (error) {
+    message.textContent = ownerError(error);
+  }
+}
+
+async function saveNewActivity(activity, date = editDate) {
   debugEvent("activity-save-request");
   if (!ownerKey || working) {
     status("activity-save-message", "処理中です。終わったらもう一度押してください。");
     return false;
   }
+  if (date !== editDate) return date === previousNightDate(activity) && await savePreviousNight(activity, date);
   const current = ownerState.days[editDate];
   if (!dayEquals(loadedDay, current)) {
     status("activity-save-message", "別の端末でこの日の記録が更新されたため、保存を止めました。入力は残っています。", true);
@@ -3176,41 +3289,57 @@ async function saveEntry(event, syncAfter = true, includeActivity = false) {
   }
   if (!hasActivityDraft && !editorDirty()) return true;
   const draft = editorDraft();
+  let nightDate;
+  let nightRecord;
   if (hasActivityDraft) {
     const activity = activityComposerDraft();
     if (!canSaveActivity(activity)) {
       status("save-message", workBreakIssue(activity) || "入力中の行動の名前と時刻を確認してください。", true);
       return false;
     }
-    if (activity.action === "仕事" && activity.start && activity.end
-      && draft.activities.some((item) => sameActivitySlot(item, activity) && !sameActivity(item, activity))) {
-      status("save-message", EDIT_EXISTING_WORK, true);
-      return false;
-    }
-    const duplicate = (activity.start || activity.end) && draft.activities.some((item) => sameActivity(item, activity));
-    if (!duplicate) {
-      if (draft.activities.length >= MAX_ACTIVITIES) {
-        status("save-message", "行動は1日16件まで保存できます。", true);
+    const date = composerActivityDate(activity);
+    if (date !== draft.date) {
+      nightDate = date;
+      nightRecord = previousNightRecord(date, activity);
+      if (!nightRecord) {
+        status("save-message", "前日の行動が16件あるため、追加できません。", true);
         return false;
       }
-      draft.activities.push(activity);
-      if (shouldMarkOutside(activity, loadedDay?.outside, draft.outside)) draft.outside = "out";
+    } else {
+      if (activity.action === "仕事" && activity.start && activity.end
+        && draft.activities.some((item) => sameActivitySlot(item, activity) && !sameActivity(item, activity))) {
+        status("save-message", EDIT_EXISTING_WORK, true);
+        return false;
+      }
+      const duplicate = (activity.start || activity.end) && draft.activities.some((item) => sameActivity(item, activity));
+      if (!duplicate) {
+        if (draft.activities.length >= MAX_ACTIVITIES) {
+          status("save-message", "行動は1日16件まで保存できます。", true);
+          return false;
+        }
+        draft.activities.push(activity);
+        if (shouldMarkOutside(activity, loadedDay?.outside, draft.outside)) draft.outside = "out";
+      }
     }
   }
+  const saveCurrent = !nightDate || editorDirty();
   const empty = !draft.mood && !draft.outside && !draft.note && !draft.activities.length;
-  if (!validDay(draft) && !(empty && loadedDay)) {
+  if (saveCurrent && !validDay(draft) && !(empty && loadedDay)) {
     const issue = draft.activities.map(workBreakIssue).find(Boolean);
     status("save-message", issue || "記録の内容を確認してください。", true);
     return;
   }
   const current = ownerState.days[draft.date];
-  if (!dayEquals(loadedDay, current) && !window.confirm("別の端末で更新された記録を、入力中の内容に置き換えますか？")) return;
-  const record = { ...draft, rev: crypto.randomUUID() };
+  if (saveCurrent && !dayEquals(loadedDay, current)
+    && !window.confirm("別の端末で更新された記録を、入力中の内容に置き換えますか？")) return;
   try {
     const done = await runOwnerOperation("save", async () => {
       const days = { ...ownerState.days };
-      if (empty) delete days[draft.date];
-      else days[draft.date] = record;
+      if (nightDate) days[nightDate] = nightRecord;
+      if (saveCurrent) {
+        if (empty) delete days[draft.date];
+        else days[draft.date] = { ...draft, rev: crypto.randomUUID() };
+      }
       await persistState({ ...ownerState, days }, true);
       status("save-message", ownerState.cloud ? "端末に保存しました。GitHubと同期します。" : "この日の記録を保存しました。");
     });
