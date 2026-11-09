@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-bGZ3rjLjikTsfQlBP2CTgkX1KI4z4MHO1r0APlfDU/w='; style-src 'sha256-i4bNKHwQen76YTF2Dj+0j0X6JuS/2pKtesDQSLVdyXs='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-KKpZtwTVwb178YjzMHLUkN93QUpAK7bnKpmN+2KUybg='; style-src 'sha256-i4bNKHwQen76YTF2Dj+0j0X6JuS/2pKtesDQSLVdyXs='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -913,22 +913,22 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                 <details class="quick-time" id="time-composer">
                   <summary id="add-activity">＋ したことを追加</summary>
                   <div class="time-presets" id="time-presets" aria-label="行動を選ぶ">
-                    <button type="button" class="button secondary" data-action="食事" data-start="" data-end="" aria-pressed="false">食事</button>
-                    <button type="button" class="button secondary" data-action="仕事" data-start="09:00" data-end="18:00" aria-pressed="false">仕事</button>
-                    <button type="button" class="button secondary" data-action="昼休み" data-start="12:00" data-end="13:00" aria-pressed="false">昼休み</button>
-                    <button type="button" class="button secondary" data-action="睡眠" data-start="23:00" data-end="07:00" aria-pressed="false">睡眠</button>
-                    <button type="button" class="button secondary" data-action="外出" data-start="10:00" data-end="11:00" aria-pressed="false">外出</button>
+                    <button type="button" class="button secondary" data-action="食事" aria-pressed="false">食事</button>
+                    <button type="button" class="button secondary" data-action="仕事" data-reuse-time aria-pressed="false">仕事</button>
+                    <button type="button" class="button secondary" data-action="昼休み" data-reuse-time aria-pressed="false">昼休み</button>
+                    <button type="button" class="button secondary" data-action="睡眠" data-reuse-time aria-pressed="false">睡眠</button>
+                    <button type="button" class="button secondary" data-action="外出" data-reuse-time aria-pressed="false">外出</button>
                   </div>
                   <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
                   <details id="quick-details" class="time-band"><summary id="quick-details-label"><span id="quick-preview">時間・場所を入れる（任意）</span></summary>
                   <label class="field"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
                   <div class="time-row">
-                    <label class="field"><span>開始</span><input type="time" id="quick-start" value="09:00" step="60"></label>
+                    <label class="field"><span>開始</span><input type="time" id="quick-start" step="60"></label>
                     <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
-                    <label class="field"><span id="quick-end-label">終了</span><input type="time" id="quick-end" value="18:00" step="60"></label>
+                    <label class="field"><span id="quick-end-label">終了</span><input type="time" id="quick-end" step="60"></label>
                   </div>
                   <button class="text-button" id="clear-quick-time" type="button" hidden>時刻を入れずに記録する</button>
-                    <details class="time-band"><summary>帯をなぞって時間を選ぶ</summary>
+                    <details class="time-band" id="quick-band"><summary>帯をなぞって時間を選ぶ</summary>
                   <p class="muted" id="preset-hint">帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。</p>
                   <div id="time-paint" aria-hidden="true">
                     <div class="clock-labels"><span>0時</span><span>6時</span><span>12時</span></div>
@@ -945,6 +945,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
                   <p class="message" id="activity-save-message" role="status"></p>
                 </details>
                 <p id="activity-saved-notice" role="status"></p>
+                <div class="activity-undo"><span id="cancelled-activity-notice" role="status"></span><button type="button" class="text-button" id="undo-cancelled-activity" hidden>入力を元に戻す</button></div>
                 <div id="overnight-activities" hidden></div>
                 <p class="muted" id="time-empty">まだ行動の記録はありません。</p>
                 <div class="activity-list" id="activity-list"></div>
@@ -2265,6 +2266,7 @@ function refreshComposerSummary() {
 
 function bindTimePicker() {
   let selected = null;
+  let cancelledDraft;
   // Times entered by the user belong to the draft, not to a preset.
   let timeEdited = false;
   const actionInput = $("quick-action");
@@ -2273,12 +2275,16 @@ function bindTimePicker() {
   let drag = null;
   const startInput = $("quick-start");
   const endInput = $("quick-end");
+  const inputs = [actionInput, placeInput, startInput, endInput];
   const composer = $("time-composer");
+  const details = $("quick-details");
+  const band = $("quick-band");
   const detailsLabel = $("quick-details-label");
   const tracks = [$("paint-am"), $("paint-pm")];
   const clock = (value) => String(Math.floor(value / 60) % 24).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0");
 
   function paint() {
+    if (cancelledDraft && !drag && activityDraftDirty()) setCancelledDraft(undefined);
     const start = clockMinute(startInput.value);
     const finish = clockMinute(endInput.value);
     const overnight = crossesMidnight({ start: startInput.value, end: endInput.value });
@@ -2302,7 +2308,8 @@ function bindTimePicker() {
       ? "帯は開始日の分です。翌日の終了は時刻欄で変更できます。"
       : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
     const time = valid ? range + "（" + durationText((finish - start + 1440) % 1440) + "）" : range;
-    const preview = [action, time || (action || place ? "時刻なし" : ""), place].filter(Boolean).join(" · ");
+    const preview = [action, time || (action || place ? "時刻なし" : ""), time && !timeEdited ? "前回の時刻" : "", place]
+      .filter(Boolean).join(" · ");
     $("quick-preview").textContent = preview || "時間・場所を入れる（任意）";
     detailsLabel.dataset.filled = String(Boolean(preview));
     $("clear-quick-time").hidden = !range;
@@ -2323,21 +2330,21 @@ function bindTimePicker() {
     timeEdited = false;
     drag = null;
     actionInput.value = placeInput.value = startInput.value = endInput.value = "";
-    $("quick-details").open = false;
+    details.open = band.open = false;
     status("activity-save-message");
     paint();
   }
 
   refreshTimePresets = () => {
+    setCancelledDraft(undefined);
     resetComposer();
     const previous = datesNewest(ownerState?.days ?? {}).filter((date) => date <= editDate)
-      .flatMap((date) => ownerState.days[date].activities);
+      .flatMap((date) => [...ownerState.days[date].activities].reverse());
     for (const preset of presets) {
-      preset.dataset.defaultStart ??= preset.dataset.start;
-      preset.dataset.defaultEnd ??= preset.dataset.end;
-      const saved = preset.dataset.defaultStart && previous.find((item) => item.action === preset.dataset.action && item.start && item.end && item.start !== item.end);
-      preset.dataset.start = saved?.start ?? preset.dataset.defaultStart;
-      preset.dataset.end = saved?.end ?? preset.dataset.defaultEnd;
+      const saved = Object.hasOwn(preset.dataset, "reuseTime")
+        && previous.find((item) => item.action === preset.dataset.action && item.start && item.end && item.start !== item.end);
+      preset.dataset.start = saved?.start ?? "";
+      preset.dataset.end = saved?.end ?? "";
     }
   };
 
@@ -2358,7 +2365,7 @@ function bindTimePicker() {
     if (selected && actionInput.value.trim() !== selected.dataset.action) selected = null;
     paint();
   });
-  for (const input of [actionInput, placeInput, startInput, endInput]) {
+  for (const input of inputs) {
     input.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return;
       event.preventDefault();
@@ -2377,8 +2384,32 @@ function bindTimePicker() {
     $("quick-details-label").focus();
   });
   $("cancel-activity").addEventListener("click", () => {
+    const draft = activityDraftDirty() ? {
+      values: inputs.map((input) => input.value), selected, timeEdited, detailsOpen: details.open, bandOpen: band.open
+    } : cancelledDraft;
     resetComposer();
-    $("time-composer").open = false;
+    composer.open = false;
+    setCancelledDraft(draft);
+    $("add-activity").focus();
+  });
+
+  function setCancelledDraft(draft) {
+    cancelledDraft = draft;
+    $("cancelled-activity-notice").textContent = draft ? "行動の入力を取り消しました。" : "";
+    $("undo-cancelled-activity").hidden = !draft;
+  }
+
+  $("undo-cancelled-activity").addEventListener("click", () => {
+    if (!cancelledDraft || activitySavePending || activityDraftDirty()) return;
+    const draft = cancelledDraft;
+    setCancelledDraft(undefined);
+    inputs.forEach((input, index) => { input.value = draft.values[index]; });
+    selected = draft.selected;
+    timeEdited = draft.timeEdited;
+    composer.open = true;
+    details.open = draft.detailsOpen;
+    band.open = draft.bandOpen;
+    paint();
     $("add-activity").focus();
   });
 
@@ -2411,6 +2442,7 @@ function bindTimePicker() {
   surface.addEventListener("pointerup", (event) => {
     if (!drag || drag.pointer !== event.pointerId) return;
     drag = null;
+    if (cancelledDraft) setCancelledDraft(undefined);
     surface.releasePointerCapture(event.pointerId);
   });
   surface.addEventListener("pointercancel", () => {
@@ -2422,7 +2454,11 @@ function bindTimePicker() {
       paint();
     }
   });
-  surface.addEventListener("lostpointercapture", () => { drag = null; });
+  surface.addEventListener("lostpointercapture", () => {
+    if (!drag) return;
+    drag = null;
+    paint();
+  });
   for (const input of [startInput, endInput]) {
     input.addEventListener("input", editTime);
     input.addEventListener("change", editTime);
