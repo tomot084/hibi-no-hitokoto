@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-CIGb6aS38l5qsdmNa9oab3myMSnT4ZEy2wqdkbwAMV8='; style-src 'sha256-aReJqA2/ejl3X/rxZ2y/oO1Cx5+5E6loz1L9B+JCyZM='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-lItmNS9MtAunzhlZOcMo9nnaxbRZtFmCQ/xHPFciB5Y='; style-src 'sha256-MAQ+pJr1Z1iYJTi6IWg9B2xJHuBh2tyuQR9VSvKm0MQ='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -680,6 +680,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .reader-overview { border-top: 3px solid var(--green); }
 .reader-overview h2 { font-size: 1.25rem; }
 #reader-window { font-size: .82rem; margin-top: 6px; }
+#reader-outside-summary { font-size: .82rem; margin-top: 8px; }
 .recent-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 16px; }
 .recent-day { min-height: 92px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px 1px; border: 1px solid transparent; border-radius: 6px; background: transparent; font-size: .75rem; }
 .recent-day[aria-pressed="true"] { border-color: var(--green); background: var(--green-soft); }
@@ -1001,6 +1002,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
           <p class="muted" id="reader-window"></p>
           <p class="review-note">記録のない日は、体調の良し悪しを示しません。書かれた内容だけを表示しています。</p>
           <div class="recent-days" id="reader-week"></div>
+          <p class="muted" id="reader-outside-summary"></p>
         </section>
         <section class="panel compact journal-index" aria-labelledby="reader-list-title">
           <div class="panel-top">
@@ -1995,6 +1997,16 @@ function selectReaderDate(date) {
   focusReaderRecord(true);
 }
 
+function outsideSummary(days) {
+  let outside = 0;
+  let recorded = 0;
+  for (const day of days) {
+    if (day?.outside === "out") outside += 1;
+    if (day?.outside === "out" || day?.outside === "home") recorded += 1;
+  }
+  return recorded ? "外に出た日 " + outside + "日 ／ 外出状況を記録した日 " + recorded + "日" : "外出状況は未記録";
+}
+
 function renderReaderOverview() {
   $("reader-overview").hidden = Boolean(legacySnapshot);
   if (legacySnapshot) return;
@@ -2007,6 +2019,7 @@ function renderReaderOverview() {
     return date.toISOString().slice(0, 10);
   });
   $("reader-window").textContent = displayDay(dates[0]) + "〜" + displayDay(today);
+  $("reader-outside-summary").textContent = outsideSummary(dates.map((date) => days[date]));
   $("reader-week").replaceChildren(...dates.map((date) => {
     const day = days[date];
     const item = button("", "recent-day", () => selectReaderDate(date));
@@ -2158,8 +2171,6 @@ function renderMonth() {
     if (startDate > current && !Object.keys(days).some((date) => date >= startDate && date <= endDate)) { firstMonday.setUTCDate(firstMonday.getUTCDate() + 7); continue; }
     const records = Object.values(days).filter((day) => day.date >= startDate && day.date <= endDate);
     const ratedDays = records.filter((day) => day.mood);
-    const outsideDays = records.filter((day) => day.outside === "out");
-    const outsideKnown = records.filter((day) => day.outside === "out" || day.outside === "home");
     const row = node("div", "week-row");
     row.append(node("strong", "", startDate.slice(5).replace("-", "/") + "〜" + endDate.slice(5).replace("-", "/")));
     const average = ratedDays.length
@@ -2180,9 +2191,7 @@ function renderMonth() {
       cell.append(node("small", "", outside));
       strip.append(cell);
     }
-    row.append(strip, node("p", "", outsideKnown.length
-      ? "外に出た日 " + outsideDays.length + "日 ／ 外出状況を記録した日 " + outsideKnown.length + "日"
-      : "外出状況は未記録"));
+    row.append(strip, node("p", "", outsideSummary(records)));
     const numbers = node("details", "week-numbers");
     numbers.append(node("summary", "", "気分の数値を見る"), node("p", "", "気分平均 " + (average !== null ? average.toFixed(1) + "/5" : "—") + "（気分の記録 " + ratedDays.length + "日）。回復度ではありません。"));
     row.append(numbers);
@@ -3619,6 +3628,7 @@ async function lockReader() {
   $("trend-list").replaceChildren();
   $("week-list").replaceChildren();
   $("reader-week").replaceChildren();
+  $("reader-outside-summary").textContent = "";
   $("month-average").textContent = "";
   status("top-message");
   $("refresh-reader").disabled = false;
