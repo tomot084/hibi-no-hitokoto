@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-LyKi4yEuXLcyY2g4AJYEUU6A4snnqgVxi36AduI+AvI='; style-src 'sha256-w3HgVtjPVXlNPYM14DQAhlvC7xI266BHZ7b5xl6xiGc='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-CIGb6aS38l5qsdmNa9oab3myMSnT4ZEy2wqdkbwAMV8='; style-src 'sha256-aReJqA2/ejl3X/rxZ2y/oO1Cx5+5E6loz1L9B+JCyZM='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -306,6 +306,9 @@ legend { padding: 0; }
 .timeline li { position: relative; padding-bottom: 12px; }
 .timeline li::before { position: absolute; content: ""; top: 8px; left: -21px; width: 8px; height: 8px; border-radius: 50%; background: #7d9a77; }
 .timeline li:last-child { padding-bottom: 0; }
+.timeline-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; }
+.timeline-line .timeline-action { font-weight: 700; }
+.timeline-line .timeline-time { overflow-wrap: anywhere; }
 .timeline-time { color: var(--green); font-size: .91rem; font-weight: 750; font-variant-numeric: tabular-nums; }
 .timeline-place { color: var(--muted); font-size: .84rem; overflow-wrap: anywhere; }
 .calendar-nav { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; margin: 10px 0; text-align: center; }
@@ -670,6 +673,10 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .trend-count { grid-column: 2; grid-row: 1; }
 
 .reader-record-label { margin-bottom: 4px; color: var(--muted); font-size: .78rem; font-weight: 700; }
+.reader-record-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 12px; margin-bottom: 4px; }
+.reader-record-header h2 { margin-bottom: 0; }
+.reader-record-nav { display: flex; flex-wrap: wrap; gap: 0 4px; }
+.reader-record-nav .text-button { color: var(--green); text-decoration: underline; text-underline-offset: .2em; }
 .reader-overview { border-top: 3px solid var(--green); }
 .reader-overview h2 { font-size: 1.25rem; }
 #reader-window { font-size: .82rem; margin-top: 6px; }
@@ -990,7 +997,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
       <div class="workspace reader-layout" id="reader-view" hidden>
         <article class="panel day-card" id="reader-detail" aria-label="選んだ日の記録"></article>
         <section class="panel reader-overview" id="reader-overview" aria-labelledby="reader-overview-title">
-          <h2 id="reader-overview-title">直近7日</h2>
+          <h2 id="reader-overview-title" tabindex="-1">直近7日</h2>
           <p class="muted" id="reader-window"></p>
           <p class="review-note">記録のない日は、体調の良し悪しを示しません。書かれた内容だけを表示しています。</p>
           <div class="recent-days" id="reader-week"></div>
@@ -1874,19 +1881,19 @@ function appendOvernightDetails(row, activity) {
 
 function activityTimeline(activities, overnight) {
   const list = node("ol", "timeline");
-  for (const activity of overnight) {
+  const append = (activity, carried = false) => {
     const row = node("li");
-    appendOvernightDetails(row, activity);
-    list.append(row);
-  }
-  for (const activity of sortedActivities(activities)) {
-    const row = node("li");
-    const time = timeRange(activity);
-    if (time) row.append(node("p", "timeline-time", time));
+    const line = node("div", "timeline-line");
+    line.append(node("span", "timeline-action", (activity.action || "行動") + (carried ? "（前日から）" : "")));
+    const time = carried ? "00:00 → " + activity.end : timeRange(activity);
+    if (time) line.append(node("span", "timeline-time", time));
+    row.append(line);
     if (activity.place) row.append(node("p", "timeline-place", activity.place));
-    if (activity.action) row.append(node("p", "timeline-action", activity.action));
+    if (carried) row.append(node("p", "overnight-meta", "前日 " + activity.start + "に開始"));
     list.append(row);
-  }
+  };
+  for (const activity of overnight) append(activity, true);
+  for (const activity of sortedActivities(activities)) append(activity);
   return list;
 }
 
@@ -1902,8 +1909,22 @@ function renderDayCard(target, date, allowEdit, latest = false) {
   const label = date ? displayDay(date, true) : "日記";
   const heading = node("h2", "", label);
   heading.tabIndex = -1;
-  if (latest) target.append(node("p", "reader-record-label", "最後の記録"));
-  target.append(heading);
+  if (target.id === "reader-detail" && !legacySnapshot && date) {
+    const header = node("div", "reader-record-header");
+    const title = node("div");
+    if (latest) title.append(node("p", "reader-record-label", "最後の記録"));
+    title.append(heading);
+    const nav = node("nav", "reader-record-nav");
+    nav.setAttribute("aria-label", "記録の日付を移動");
+    nav.append(button("直近7日へ", "text-button", () => {
+      $("reader-overview-title").focus({ preventScroll: true });
+      $("reader-overview").scrollIntoView({ block: "start" });
+    }));
+    const latestDate = datesNewest(days)[0];
+    if (latestDate && !latest) nav.append(button("最後の記録へ", "text-button", () => selectReaderDate(latestDate)));
+    header.append(title, nav);
+    target.append(header);
+  } else target.append(heading);
   if (!day && !overnight.length) {
     target.append(node("p", "muted", date ? "この日の記録はありません。記録がない理由や体調は分かりません。" : "日記が保存されると、ここで読めます。"));
   } else {
