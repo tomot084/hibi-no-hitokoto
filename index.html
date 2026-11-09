@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-lItmNS9MtAunzhlZOcMo9nnaxbRZtFmCQ/xHPFciB5Y='; style-src 'sha256-MAQ+pJr1Z1iYJTi6IWg9B2xJHuBh2tyuQR9VSvKm0MQ='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-lLFLNhyu19AZa718KV9skV6z1xAZlnJbUTdMTLv+3Qs='; style-src 'sha256-i4bNKHwQen76YTF2Dj+0j0X6JuS/2pKtesDQSLVdyXs='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -667,6 +667,8 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 #leave-dialog { max-width: min(440px, calc(100vw - 32px)); }
 .trend-row { min-height: 44px; }
 .header-actions .button, .journal-status .button { min-height: 44px; }
+#refresh-reader.reader-update-ready { background: var(--green-soft); border-color: var(--green); }
+.reader-update-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
 .trend-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; padding-block: 8px; }
 .trend-row > svg { grid-column: 1 / -1; grid-row: 2; }
@@ -854,8 +856,9 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
         </nav>
         <div class="journal-status">
           <button type="button" class="button quiet icon-text" id="refresh-reader" hidden aria-label="最新の記録を読み込む">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8m2-14v6h-6"/></svg><span>更新</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8m2-14v6h-6"/></svg><span id="refresh-reader-label">更新</span>
           </button>
+          <span class="reader-update-live" id="reader-update-announcement" role="status"></span>
           <span class="status-pill" id="sync-pill"><span class="status-dot" aria-hidden="true"></span><span id="sync-label">端末に保存</span></span>
         </div>
       </div>
@@ -3483,6 +3486,8 @@ let readerSnapshot;
 let readerKey;
 let readerDatabase;
 let readerEnvelope;
+let readerPendingUpdate;
+let readerRefreshRequest;
 let rememberReader = false;
 let readerWork = false;
 let readerGeneration = 0;
@@ -3538,28 +3543,72 @@ async function readShared() {
   return file.text;
 }
 
-async function refreshReader() {
-  if (legacySnapshot || readerWork || !readerKey) return;
-  const generation = readerGeneration;
-  readerWork = true;
+function setReaderPendingUpdate(update) {
+  const wasAvailable = Boolean(readerPendingUpdate);
+  readerPendingUpdate = update;
+  const available = Boolean(update);
+  if (available === wasAvailable) return;
+  const label = available ? "更新された記録を見る" : "更新";
+  const control = $("refresh-reader");
+  $("refresh-reader-label").textContent = label;
+  control.setAttribute("aria-label", available ? label : "最新の記録を読み込む");
+  control.classList.toggle("reader-update-ready", available);
+  $("reader-update-announcement").textContent = available ? "記録の更新があります。" : "";
+}
+
+async function applyReaderUpdate({ text, snapshot }) {
+  setReaderPendingUpdate(undefined);
+  readerEnvelope = text;
+  showReader(snapshot);
+  status("top-message");
+  await rememberSession(text);
+}
+
+function markReaderRefreshInteractive(request) {
+  request.interactive = true;
   $("refresh-reader").disabled = true;
   syncPill("更新中", "wait");
-  lastReaderCheck = Date.now();
+}
+
+async function refreshReader({ background = false } = {}) {
+  if (legacySnapshot || !readerKey) return;
+  if (readerWork) {
+    if (!background && readerRefreshRequest) markReaderRefreshInteractive(readerRefreshRequest);
+    return;
+  }
+  const generation = readerGeneration;
+  const request = { interactive: false };
+  readerRefreshRequest = request;
+  readerWork = true;
+  if (!background) markReaderRefreshInteractive(request);
   try {
+    if (!background && readerPendingUpdate) {
+      await applyReaderUpdate(readerPendingUpdate);
+      return;
+    }
+    lastReaderCheck = Date.now();
     const text = await readShared();
     if (generation !== readerGeneration) return;
-    const snapshot = await openArchive(readerKey, readerRepo, text);
+    if (text === readerEnvelope && readerSnapshot) {
+      setReaderPendingUpdate(undefined);
+      if (request.interactive) {
+        renderReaderStatus();
+        status("top-message");
+      }
+      return;
+    }
+    const update = readerPendingUpdate?.text === text ? readerPendingUpdate
+      : { text, snapshot: await openArchive(readerKey, readerRepo, text) };
     if (generation !== readerGeneration) return;
-    readerEnvelope = text;
-    showReader(snapshot);
-    status("top-message");
-    await rememberSession(text);
+    if (request.interactive) await applyReaderUpdate(update);
+    else setReaderPendingUpdate(update);
   } catch (error) {
-    if (generation !== readerGeneration) return;
+    if (generation !== readerGeneration || !request.interactive) return;
     renderReaderStatus(true);
     status("top-message", error.message + " 前回の記録を表示しています。", true);
   } finally {
     if (generation === readerGeneration) {
+      readerRefreshRequest = undefined;
       readerWork = false;
       $("refresh-reader").disabled = false;
     }
@@ -3615,6 +3664,8 @@ async function lockReader() {
   readerKey = undefined;
   readerSnapshot = undefined;
   readerEnvelope = undefined;
+  setReaderPendingUpdate(undefined);
+  readerRefreshRequest = undefined;
   rememberReader = false;
   readerWork = false;
   $("journal").hidden = true;
@@ -3658,10 +3709,10 @@ async function initReader() {
     return;
   }
   $("reader-gate-form").addEventListener("submit", unlockReader);
-  $("refresh-reader").addEventListener("click", refreshReader);
+  $("refresh-reader").addEventListener("click", () => void refreshReader());
   $("lock").addEventListener("click", lockReader);
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && Date.now() - lastReaderCheck >= 300000) void refreshReader();
+    if (!document.hidden && Date.now() - lastReaderCheck >= 300000) void refreshReader({ background: true });
   });
   // The fragment stays out of the HTTP request. Keep it in the URL so
   // bookmarks and links opened on a different device remain usable.
@@ -3689,7 +3740,7 @@ async function initReader() {
         readerEnvelope = cached.text;
         systemStatus("");
         showReader(snapshot);
-        void refreshReader();
+        void refreshReader({ background: true });
         return;
       }
     } catch {
