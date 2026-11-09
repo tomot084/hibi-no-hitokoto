@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-lLFLNhyu19AZa718KV9skV6z1xAZlnJbUTdMTLv+3Qs='; style-src 'sha256-i4bNKHwQen76YTF2Dj+0j0X6JuS/2pKtesDQSLVdyXs='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-nYAbRuFEnmz8lREgWp7esqWeK2eOtxakD96HDxWqDhw='; style-src 'sha256-i4bNKHwQen76YTF2Dj+0j0X6JuS/2pKtesDQSLVdyXs='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -796,6 +796,10 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 
     <noscript><p class="panel standalone">ブラウザーのJavaScriptを有効にすると、この日記を使えます。</p></noscript>
     <p class="panel standalone" id="system-message" role="status" hidden></p>
+    <div class="panel standalone" id="reader-link-state" hidden>
+      <p id="reader-link-message" role="status"></p>
+      <button type="button" class="button secondary day-edit" id="retry-reader-link" hidden>もう一度読み込む</button>
+    </div>
 
     <section class="panel gate" id="owner-gate" hidden aria-labelledby="gate-title">
       <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h12a2 2 0 0 1 2 2v14H6a3 3 0 0 1 0-6h13M6 4a2 2 0 0 0-2 2v11m4-8h7"/></svg></span>
@@ -826,7 +830,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
       <span class="tile-icon gold" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3m-4 5v2"/></svg></span>
       <p class="overline">閲覧専用</p>
       <h2 id="reader-gate-title">共有された日記を開く</h2>
-      <p class="muted">最初に受け取った閲覧コードで、日々の記録を読み返せます。</p>
+      <p class="muted">閲覧コードを別に受け取っていない場合は、届いたリンク全体を開いてください。</p>
       <form id="reader-gate-form">
         <label class="field">
           <span>閲覧コード</span>
@@ -1551,6 +1555,8 @@ async function buildArchive(key, repo, snapshot) {
   return text;
 }
 
+class ArchiveKeyError extends Error {}
+
 async function openArchive(key, repo, text) {
   if (typeof text !== "string" || text.length > MAX_CLOUD_BYTES) throw new Error("共有ファイルが大きすぎます。");
   const envelope = JSON.parse(text);
@@ -1561,7 +1567,7 @@ async function openArchive(key, repo, text) {
   try {
     bytes = await unsealBytes(key, envelope.box, snapshotContext(repo, envelope.codec));
   } catch {
-    throw new Error("閲覧コードを確認してください。");
+    throw new ArchiveKeyError("閲覧コードを確認してください。");
   }
   if (envelope.codec === "gzip") {
     if (typeof DecompressionStream !== "function") {
@@ -3520,6 +3526,7 @@ function showReader(snapshot) {
   const followedLatest = !first && selectedReaderDate === datesNewest(readerSnapshot.days)[0];
   readerSnapshot = snapshot;
   if (first || followedLatest) selectedReaderDate = datesNewest(snapshot.days)[0];
+  $("reader-link-state").hidden = true;
   $("reader-gate").hidden = true;
   $("journal").hidden = false;
   $("lock").hidden = false;
@@ -3615,18 +3622,30 @@ async function refreshReader({ background = false } = {}) {
   }
 }
 
-async function unlockReader(event) {
-  event.preventDefault();
+function showReaderLinkState(message, retry = false) {
+  $("reader-gate").hidden = true;
+  $("reader-link-state").hidden = false;
+  $("reader-link-message").textContent = message;
+  $("retry-reader-link").hidden = !retry;
+  systemStatus("");
+}
+
+async function unlockReader(event, linkCode = null) {
+  event?.preventDefault();
   if (readerWork) return;
-  const code = $("reader-code").value.trim();
+  const linked = linkCode !== null;
+  const code = linked ? linkCode : $("reader-code").value.trim();
   if (!validCode(code)) {
-    status("reader-gate-message", "受け取った22文字の閲覧コードを入力してください。", true);
+    if (linked) showReaderLinkState("閲覧リンクが途中で切れている可能性があります。届いたリンク全体を開いてください。");
+    else status("reader-gate-message", "受け取った22文字の閲覧コードを入力してください。", true);
     return;
   }
   const open = $("open-reader");
   readerWork = true;
   open.disabled = true;
-  status("reader-gate-message", "日記を開いています…");
+  if (linked) showReaderLinkState("記録を読み込んでいます…");
+  else status("reader-gate-message", "日記を開いています…");
+  let fetching = false;
   try {
     const key = await importCode(code, ["decrypt"]);
     let snapshot;
@@ -3640,19 +3659,30 @@ async function unlockReader(event) {
       }
       snapshot = { days: { [day.date]: { ...day, rev: crypto.randomUUID() } } };
     } else {
-      readerEnvelope ??= await readShared();
-      snapshot = await openArchive(key, readerRepo, readerEnvelope);
+      fetching = true;
+      const text = linked ? await readShared() : readerEnvelope ?? await readShared();
+      fetching = false;
+      snapshot = await openArchive(key, readerRepo, text);
+      readerEnvelope = text;
       lastReaderCheck = Date.now();
     }
     readerKey = key;
-    rememberReader = !legacySnapshot && $("remember-code").checked;
+    rememberReader = !linked && !legacySnapshot && $("remember-code").checked;
     $("reader-gate-form").reset();
     status("reader-gate-message");
     showReader(snapshot);
     focusReaderRecord();
     await rememberSession(readerEnvelope);
   } catch (error) {
-    status("reader-gate-message", error.message, true);
+    if (!linked) status("reader-gate-message", error.message, true);
+    else if (error instanceof ArchiveKeyError) {
+      showReaderLinkState("このリンクでは記録を開けませんでした。届いたリンク全体を開き直してください。それでも開けない場合は、送り主に確認してください。");
+    } else if (fetching) {
+      showReaderLinkState("記録を読み込めませんでした。時間をおいて、もう一度お試しください。", true);
+      $("retry-reader-link").focus({ preventScroll: true });
+    } else {
+      showReaderLinkState("共有された記録を開けませんでした。送り主に確認してください。");
+    }
   } finally {
     readerWork = false;
     open.disabled = false;
@@ -3683,8 +3713,13 @@ async function lockReader() {
   $("month-average").textContent = "";
   status("top-message");
   $("refresh-reader").disabled = false;
-  $("reader-gate").hidden = false;
-  $("reader-code").focus();
+  if (readerLinkCode !== null) {
+    showReaderLinkState("記録を閉じました。", true);
+    $("retry-reader-link").focus();
+  } else {
+    $("reader-gate").hidden = false;
+    $("reader-code").focus();
+  }
   if (readerDatabase) {
     try {
       await writeCache(readerDatabase, readerCacheId(), null);
@@ -3705,10 +3740,11 @@ async function initReader() {
   $("lock").setAttribute("aria-label", "閲覧を閉じて、端末のコードの記憶を消す");
   $("remember-row").hidden = Boolean(legacySnapshot);
   if (legacySnapshot ? !/^[A-Za-z0-9_-]{39,40000}$/.test(legacySnapshot) : !readerRepo) {
-    systemStatus("共有URLの形式を確認してください。日記を共有した人から、閲覧URLを受け取ってください。");
+    systemStatus("閲覧リンクを確認できませんでした。届いたリンク全体を開いてください。");
     return;
   }
   $("reader-gate-form").addEventListener("submit", unlockReader);
+  $("retry-reader-link").addEventListener("click", () => void unlockReader(null, readerLinkCode));
   $("refresh-reader").addEventListener("click", () => void refreshReader());
   $("lock").addEventListener("click", lockReader);
   document.addEventListener("visibilitychange", () => {
@@ -3716,17 +3752,8 @@ async function initReader() {
   });
   // The fragment stays out of the HTTP request. Keep it in the URL so
   // bookmarks and links opened on a different device remain usable.
-  const linkCode = sharedView ? new URLSearchParams(location.hash.slice(1)).get("key") : null;
-  if (linkCode !== null) {
-    systemStatus("");
-    if (!validCode(linkCode)) {
-      $("reader-gate").hidden = false;
-      status("reader-gate-message", "閲覧URLが途中で切れている可能性があります。届いたURL全体を開き直してください。", true);
-      return;
-    }
-    $("reader-code").value = linkCode;
-    await unlockReader({ preventDefault() {} });
-    if (!readerSnapshot) $("reader-gate").hidden = false;
+  if (readerLinkCode !== null) {
+    await unlockReader(null, readerLinkCode);
     return;
   }
   if (!legacySnapshot) {
@@ -3753,6 +3780,7 @@ async function initReader() {
 
 const params = new URL(location.href).searchParams;
 const sharedView = params.get("view") === "1";
+const readerLinkCode = sharedView ? new URLSearchParams(location.hash.slice(1)).get("key") : null;
 const legacySnapshot = !sharedView && location.hash.startsWith("#read=") ? location.hash.slice(6) : "";
 const isReader = sharedView || Boolean(legacySnapshot);
 const readerRepo = canonicalRepo(params.get("repo") ?? "");
