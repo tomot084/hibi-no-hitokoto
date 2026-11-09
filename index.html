@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-KKpZtwTVwb178YjzMHLUkN93QUpAK7bnKpmN+2KUybg='; style-src 'sha256-i4bNKHwQen76YTF2Dj+0j0X6JuS/2pKtesDQSLVdyXs='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-gF19G/dhmxXRQayjuBrnZGkotUKVTOWKwT9Ry3f0ur4='; style-src 'sha256-AFnHkcAj3zYTtVbxyd6+5B7/rjC9oQJAvt37271I8Oc='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -669,6 +669,10 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .header-actions .button, .journal-status .button { min-height: 44px; }
 #refresh-reader.reader-update-ready { background: var(--green-soft); border-color: var(--green); }
 .reader-update-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: flex-end; }
+.reader-sync-status { display: grid; justify-items: end; }
+#reader-refresh-feedback { color: var(--muted); font-size: .73rem; text-align: right; }
+#reader-refresh-feedback:empty { display: none; }
 
 .trend-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; padding-block: 8px; }
 .trend-row > svg { grid-column: 1 / -1; grid-row: 2; }
@@ -859,11 +863,14 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
           </button>
         </nav>
         <div class="journal-status">
-          <button type="button" class="button quiet icon-text" id="refresh-reader" hidden aria-label="最新の記録を読み込む">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8m2-14v6h-6"/></svg><span id="refresh-reader-label">更新</span>
+          <button type="button" class="button quiet icon-text" id="refresh-reader" hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8m2-14v6h-6"/></svg><span id="refresh-reader-label">最新を確認</span>
           </button>
           <span class="reader-update-live" id="reader-update-announcement" role="status"></span>
-          <span class="status-pill" id="sync-pill"><span class="status-dot" aria-hidden="true"></span><span id="sync-label">端末に保存</span></span>
+          <div class="reader-sync-status">
+            <span class="status-pill" id="sync-pill"><span class="status-dot" aria-hidden="true"></span><span id="sync-label">端末に保存</span></span>
+            <p id="reader-refresh-feedback" role="status"></p>
+          </div>
         </div>
       </div>
       <p class="message top-message" id="top-message" role="status"></p>
@@ -1729,6 +1736,7 @@ const SHORT_DATE = new Intl.DateTimeFormat("ja-JP", { month: "long", day: "numer
 const LONG_DATE = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", weekday: "short", timeZone: "UTC" });
 const MONTH_FORMAT = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: "UTC" });
 const TIME_FORMAT = new Intl.DateTimeFormat("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const CLOCK_FORMAT = new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 let displayedPanel = "main";
 let monthCursor;
@@ -3597,26 +3605,31 @@ function setReaderPendingUpdate(update) {
   readerPendingUpdate = update;
   const available = Boolean(update);
   if (available === wasAvailable) return;
-  const label = available ? "更新された記録を見る" : "更新";
+  const label = available ? "更新された記録を見る" : "最新を確認";
   const control = $("refresh-reader");
   $("refresh-reader-label").textContent = label;
-  control.setAttribute("aria-label", available ? label : "最新の記録を読み込む");
   control.classList.toggle("reader-update-ready", available);
   $("reader-update-announcement").textContent = available ? "記録の更新があります。" : "";
+  if (available) $("reader-refresh-feedback").textContent = "";
 }
 
-async function applyReaderUpdate({ text, snapshot }) {
+function readerCheckResult(result) {
+  return CLOCK_FORMAT.format(new Date()) + "に確認・" + result;
+}
+
+async function applyReaderUpdate({ text, snapshot }, feedback) {
   setReaderPendingUpdate(undefined);
   readerEnvelope = text;
   showReader(snapshot);
   status("top-message");
+  $("reader-refresh-feedback").textContent = feedback;
   await rememberSession(text);
 }
 
 function markReaderRefreshInteractive(request) {
   request.interactive = true;
   $("refresh-reader").disabled = true;
-  syncPill("更新中", "wait");
+  $("reader-refresh-feedback").textContent = "最新の記録を確認しています…";
 }
 
 async function refreshReader({ background = false } = {}) {
@@ -3632,7 +3645,7 @@ async function refreshReader({ background = false } = {}) {
   if (!background) markReaderRefreshInteractive(request);
   try {
     if (!background && readerPendingUpdate) {
-      await applyReaderUpdate(readerPendingUpdate);
+      await applyReaderUpdate(readerPendingUpdate, "更新された記録を表示しました。");
       return;
     }
     lastReaderCheck = Date.now();
@@ -3643,17 +3656,19 @@ async function refreshReader({ background = false } = {}) {
       if (request.interactive) {
         renderReaderStatus();
         status("top-message");
+        $("reader-refresh-feedback").textContent = readerCheckResult("変更なし");
       }
       return;
     }
     const update = readerPendingUpdate?.text === text ? readerPendingUpdate
       : { text, snapshot: await openArchive(readerKey, readerRepo, text) };
     if (generation !== readerGeneration) return;
-    if (request.interactive) await applyReaderUpdate(update);
+    if (request.interactive) await applyReaderUpdate(update, readerCheckResult("更新を反映"));
     else setReaderPendingUpdate(update);
   } catch (error) {
     if (generation !== readerGeneration || !request.interactive) return;
     renderReaderStatus(true);
+    $("reader-refresh-feedback").textContent = "最新の記録を確認できませんでした。";
     status("top-message", error.message + " 前回の記録を表示しています。", true);
   } finally {
     if (generation === readerGeneration) {
@@ -3752,6 +3767,7 @@ async function lockReader() {
   $("week-list").replaceChildren();
   $("reader-week").replaceChildren();
   $("reader-outside-summary").textContent = "";
+  $("reader-refresh-feedback").textContent = "";
   $("month-average").textContent = "";
   status("top-message");
   $("refresh-reader").disabled = false;
