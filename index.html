@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-nYAbRuFEnmz8lREgWp7esqWeK2eOtxakD96HDxWqDhw='; style-src 'sha256-i4bNKHwQen76YTF2Dj+0j0X6JuS/2pKtesDQSLVdyXs='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-bGZ3rjLjikTsfQlBP2CTgkX1KI4z4MHO1r0APlfDU/w='; style-src 'sha256-i4bNKHwQen76YTF2Dj+0j0X6JuS/2pKtesDQSLVdyXs='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -2265,7 +2265,8 @@ function refreshComposerSummary() {
 
 function bindTimePicker() {
   let selected = null;
-  const times = new Map();
+  // Times entered by the user belong to the draft, not to a preset.
+  let timeEdited = false;
   const actionInput = $("quick-action");
   const placeInput = $("quick-place");
   const presets = [...$("time-presets").querySelectorAll("button")];
@@ -2319,7 +2320,8 @@ function bindTimePicker() {
 
   function resetComposer() {
     selected = null;
-    times.clear();
+    timeEdited = false;
+    drag = null;
     actionInput.value = placeInput.value = startInput.value = endInput.value = "";
     $("quick-details").open = false;
     status("activity-save-message");
@@ -2341,14 +2343,11 @@ function bindTimePicker() {
 
   for (const preset of presets) {
     preset.addEventListener("click", () => {
-      if (selected) times.set(selected, [startInput.value, endInput.value]);
-      if (selected === preset) {
-        selected = null;
-        actionInput.value = startInput.value = endInput.value = "";
-      } else {
-        selected = preset;
-        actionInput.value = preset.dataset.action;
-        [startInput.value, endInput.value] = times.get(preset) ?? [preset.dataset.start, preset.dataset.end];
+      selected = selected === preset ? null : preset;
+      actionInput.value = selected?.dataset.action ?? "";
+      if (!timeEdited) {
+        startInput.value = selected?.dataset.start ?? "";
+        endInput.value = selected?.dataset.end ?? "";
       }
       status("activity-save-message");
       paint();
@@ -2368,9 +2367,13 @@ function bindTimePicker() {
     });
   }
   placeInput.addEventListener("input", paint);
+  function editTime() {
+    timeEdited = true;
+    paint();
+  }
   $("clear-quick-time").addEventListener("click", () => {
     startInput.value = endInput.value = "";
-    paint();
+    editTime();
     $("quick-details-label").focus();
   });
   $("cancel-activity").addEventListener("click", () => {
@@ -2392,14 +2395,14 @@ function bindTimePicker() {
   surface.addEventListener("pointerdown", (event) => {
     if (activitySavePending || !event.isPrimary || event.button !== 0) return;
     const anchor = position(event);
-    drag = { pointer: event.pointerId, anchor, start: startInput.value, end: endInput.value };
+    drag = { pointer: event.pointerId, anchor, start: startInput.value, end: endInput.value, timeEdited };
     surface.setPointerCapture(event.pointerId);
     startInput.value = clock(anchor);
     endInput.value = clock(anchor + 15);
-    paint();
+    editTime();
   });
   surface.addEventListener("pointermove", (event) => {
-    if (!drag || drag.pointer !== event.pointerId) return;
+    if (activitySavePending || !drag || drag.pointer !== event.pointerId) return;
     const current = position(event);
     startInput.value = clock(Math.min(current, drag.anchor));
     endInput.value = clock(Math.max(current, drag.anchor) + 15);
@@ -2414,13 +2417,16 @@ function bindTimePicker() {
     if (drag) {
       startInput.value = drag.start;
       endInput.value = drag.end;
+      timeEdited = drag.timeEdited;
       drag = null;
       paint();
     }
   });
   surface.addEventListener("lostpointercapture", () => { drag = null; });
-  startInput.addEventListener("input", paint);
-  endInput.addEventListener("input", paint);
+  for (const input of [startInput, endInput]) {
+    input.addEventListener("input", editTime);
+    input.addEventListener("change", editTime);
+  }
   $("add-selected-time").addEventListener("click", async () => {
     const activity = activityComposerDraft();
     if (activitySavePending || !ownerKey || !canSaveActivity(activity)) return;
