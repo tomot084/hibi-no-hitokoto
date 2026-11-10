@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Zh/wK59pD9NA5r/Qo7XakDUdog1q9feTP3KJnyAuKBk='; style-src 'sha256-fWN/f2QZydrfzY5AUbFebNwHI0/3NB4124GAS+tirtw='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-gD76TudXfDzfMF8xRXYR0E4g9jwnthhYnPSGAvLq550='; style-src 'sha256-pqfNcY4vpUkhGa+FxIic9EoN16D8iY4GB99NPLvN0MU='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -717,6 +717,10 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 #quick-night-option .check-row { margin: 0; }
 .sleep-date { display: block; color: var(--muted); font-size: .75rem; font-weight: 500; }
 .overnight-total { color: var(--muted); font-size: .8rem; }
+#view-history-rows > details { border-top: 1px solid var(--line); }
+#view-history-rows summary { min-height: 44px; padding-block: 10px; overflow-wrap: anywhere; }
+#view-history-rows ul { padding: 0 0 10px 1.25em; font-variant-numeric: tabular-nums; }
+#view-history-refresh { margin-top: 8px; }
 #cancel-activity { margin-top: 4px; }
 
 @media (min-width: 761px) {
@@ -995,6 +999,19 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
         </section>
 
         <aside class="sidebar">
+          <details class="panel compact" id="view-history" hidden>
+            <summary>閲覧履歴</summary>
+            <p class="muted">直近30日・日本時間</p>
+            <form id="view-history-form">
+              <label class="field" id="view-history-key-field">
+                <span>履歴の管理キー</span>
+                <input type="password" id="view-history-key" maxlength="64" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+              </label>
+              <button type="submit" class="button secondary" id="view-history-refresh">履歴を表示</button>
+            </form>
+            <p class="message" id="view-history-status" role="status"></p>
+            <div id="view-history-rows"></div>
+          </details>
           <details class="panel compact">
             <summary>不具合を報告</summary>
             <p class="muted">保存状態・行動の時刻・操作履歴をコピーします。合言葉、トークン、共有URL、メモ・場所・行動の本文は含みません。</p>
@@ -1165,6 +1182,13 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
             <a class="button quiet icon-text" id="reader-preview" target="_blank" rel="noopener noreferrer">
               <span>閲覧画面を開く</span><span aria-hidden="true">↗</span>
             </a>
+            <details class="setup-guide" id="view-log-setup" hidden>
+              <summary>閲覧履歴の連携</summary>
+              <p class="muted">履歴サーバーは未接続です。接続後から閲覧を記録します。</p>
+              <button type="button" class="button secondary" id="prepare-view-log">設定用のキーを表示</button>
+              <textarea id="view-log-setup-values" aria-label="履歴サーバーの設定用キー" rows="4" readonly spellcheck="false" hidden></textarea>
+              <p class="message" id="view-log-setup-message" role="status"></p>
+            </details>
           </div>
           <p class="message" id="copy-message" role="status"></p>
         </section>
@@ -1752,6 +1776,12 @@ const LONG_DATE = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "lo
 const MONTH_FORMAT = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: "UTC" });
 const TIME_FORMAT = new Intl.DateTimeFormat("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 const CLOCK_FORMAT = new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const VIEW_LOG_ENDPOINT = "";
+const VIEW_LOG_REPO = "tomot084/hibi-no-hitokoto";
+const VIEW_LOG_DATE = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo", year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+});
+const validViewLogKey = (key) => typeof key === "string" && /^[A-Za-z0-9_-]{43}$/.test(key);
 
 let displayedPanel = "main";
 let monthCursor;
@@ -1832,6 +1862,123 @@ function status(id, text = "", error = false) {
   const element = $(id);
   element.textContent = text;
   element.classList.toggle("error", error);
+}
+
+async function viewLogProof(code) {
+  const bytes = encoder.encode("hibi-view-log-v1:" + VIEW_LOG_REPO + ":" + code);
+  return encodeBytes(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)));
+}
+
+function queueReaderView() {
+  if (!VIEW_LOG_ENDPOINT || legacySnapshot || readerRepo !== VIEW_LOG_REPO || !validViewLogKey(readerViewProof)) return;
+  const generation = readerGeneration;
+  const proof = readerViewProof;
+  const send = () => {
+    if (document.visibilityState !== "visible") return;
+    document.removeEventListener("visibilitychange", send);
+    if (readerGeneration !== generation || !readerSnapshot) return;
+    void fetch(VIEW_LOG_ENDPOINT + "/views", {
+      method: "POST", credentials: "omit", keepalive: true, redirect: "error", referrerPolicy: "no-referrer",
+      headers: { Authorization: "Bearer " + proof, "Content-Type": "text/plain" },
+      body: crypto.randomUUID()
+    }).catch(() => {});
+  };
+  if (document.visibilityState === "visible") send();
+  else document.addEventListener("visibilitychange", send);
+}
+
+function showViewHistoryKeyField(visible) {
+  const field = $("view-history-key");
+  $("view-history-key-field").hidden = !visible;
+  field.disabled = !visible;
+  field.required = visible;
+}
+
+async function loadViewHistory() {
+  if (!VIEW_LOG_ENDPOINT || !ownerKey || ownerState?.cloud?.repo !== VIEW_LOG_REPO) return;
+  const key = ownerKey;
+  const refresh = $("view-history-refresh");
+  if (refresh.disabled) return;
+  const field = $("view-history-key");
+  const adminKey = field.disabled ? ownerState.viewHistoryKey : field.value.trim();
+  if (!validViewLogKey(adminKey)) {
+    status("view-history-status", "履歴の管理キーを確認してください。", true);
+    return;
+  }
+  refresh.disabled = true;
+  status("view-history-status", "読み込み中…");
+  try {
+    const response = await fetch(VIEW_LOG_ENDPOINT + "/views", {
+      credentials: "omit", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer",
+      headers: { Authorization: "Bearer " + adminKey }
+    });
+    if (key !== ownerKey || ownerState.cloud?.repo !== VIEW_LOG_REPO) return;
+    if (response.status === 401) {
+      $("view-history-rows").replaceChildren();
+      showViewHistoryKeyField(true);
+      status("view-history-status", "履歴の管理キーを確認してください。", true);
+      return;
+    }
+    if (!response.ok) throw new Error("View history unavailable");
+    const { total, shown, groups } = await response.json();
+    if (key !== ownerKey || ownerState.cloud?.repo !== VIEW_LOG_REPO) return;
+    const rows = groups.map(({ ip, count, times }) => {
+      const row = node("details");
+      const list = node("ul");
+      for (const value of times) {
+        const item = node("li");
+        const time = node("time", "", VIEW_LOG_DATE.format(value));
+        time.dateTime = new Date(value).toISOString();
+        item.append(time);
+        list.append(item);
+      }
+      row.append(node("summary", "", ip + " · " + count + "回"), list);
+      return row;
+    });
+    $("view-history-rows").replaceChildren(...rows);
+    status("view-history-status", total ? "合計 " + total + "回" + (shown < total ? " · 新しい" + shown + "件を表示" : "")
+      : "閲覧履歴はまだありません。");
+    if (adminKey !== ownerState.viewHistoryKey) {
+      try {
+        await runOwnerOperation("view-history", () => persistState({ ...ownerState, viewHistoryKey: adminKey }));
+      } catch {
+        // A concurrent diary edit can prevent remembering the key. Keep the displayed history.
+      }
+    }
+    if (key === ownerKey && ownerState.viewHistoryKey === adminKey) {
+      field.value = "";
+      showViewHistoryKeyField(false);
+      refresh.textContent = "履歴を更新";
+    }
+  } catch {
+    if (key === ownerKey) status("view-history-status", "履歴を読み込めませんでした。もう一度お試しください。", true);
+  } finally {
+    refresh.disabled = false;
+  }
+}
+
+async function prepareViewLog() {
+  const key = ownerKey;
+  const cloud = ownerState?.cloud;
+  if (!key || cloud?.repo !== VIEW_LOG_REPO) return;
+  try {
+    let adminKey = ownerState.viewHistoryKey;
+    if (!validViewLogKey(adminKey)) {
+      adminKey = encodeBytes(crypto.getRandomValues(new Uint8Array(32)));
+      const saved = await runOwnerOperation("view-history", () => persistState({ ...ownerState, viewHistoryKey: adminKey }));
+      if (!saved) throw new Error("Owner is busy");
+    }
+    const writeKey = await viewLogProof(cloud.code);
+    if (key !== ownerKey || ownerState.cloud?.code !== cloud.code) return;
+    const output = $("view-log-setup-values");
+    output.value = "VIEW_ADMIN_KEY=" + adminKey + "\nVIEW_WRITE_KEY=" + writeKey;
+    output.hidden = false;
+    output.focus();
+    output.select();
+    status("view-log-setup-message");
+  } catch {
+    if (key === ownerKey) status("view-log-setup-message", "キーを準備できませんでした。少し待ってもう一度お試しください。", true);
+  }
 }
 
 function systemStatus(text) {
@@ -3062,6 +3209,8 @@ function readerUrl(repo, code) {
 
 function renderOwnerConnection() {
   const cloud = ownerState?.cloud;
+  $("view-history").hidden = !VIEW_LOG_ENDPOINT || !ownerKey || cloud?.repo !== VIEW_LOG_REPO;
+  $("view-log-setup").hidden = Boolean(VIEW_LOG_ENDPOINT) || cloud?.repo !== VIEW_LOG_REPO;
   const pending = ownerState && hasPending(ownerState);
   const shareReady = Boolean(cloud?.syncedAt);
   $("connect-setup").hidden = Boolean(cloud);
@@ -3634,6 +3783,14 @@ function lockOwner() {
   debugEvents.length = 0;
   $("debug-output").value = "";
   $("debug-output").hidden = true;
+  $("view-history").open = false;
+  $("view-history-form").reset();
+  $("view-history-rows").replaceChildren();
+  status("view-history-status");
+  $("view-log-setup").open = false;
+  $("view-log-setup-values").value = "";
+  $("view-log-setup-values").hidden = true;
+  status("view-log-setup-message");
   status("debug-message");
   ownerKey = undefined;
   ownerState = undefined;
@@ -3676,6 +3833,17 @@ async function initOwner() {
       radio.addEventListener("change", () => { if (radio.checked) queueQuickSave("outside", radio.value); });
     }
     $("owner-gate-form").addEventListener("submit", unlockOwner);
+    $("view-history").addEventListener("toggle", () => {
+      if (!$("view-history").open || $("view-history").hidden) return;
+      const remembered = validViewLogKey(ownerState?.viewHistoryKey);
+      showViewHistoryKeyField(!remembered);
+      if (remembered) void loadViewHistory();
+    });
+    $("view-history-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      void loadViewHistory();
+    });
+    $("prepare-view-log").addEventListener("click", () => void prepareViewLog());
     $("editor-form").addEventListener("submit", saveEntry);
     $("editor-form").addEventListener("input", () => {
       refreshEditorControls();
@@ -3809,6 +3977,7 @@ let readerRemembered = false;
 let readerWork = false;
 let readerGeneration = 0;
 let lastReaderCheck = 0;
+let readerViewProof;
 
 function readerCacheId() {
   return "viewer-v2:" + readerRepo;
@@ -3820,7 +3989,7 @@ async function rememberSession(text) {
   try {
     readerDatabase ??= await openVault();
     if (generation !== readerGeneration || !readerKey || !rememberReader) return;
-    await writeCache(readerDatabase, readerCacheId(), { key: readerKey, text });
+    await writeCache(readerDatabase, readerCacheId(), { key: readerKey, text, viewProof: readerViewProof });
     if (generation !== readerGeneration) return;
     readerRemembered = true;
     $("lock").hidden = false;
@@ -3857,6 +4026,7 @@ function showReader(snapshot) {
   renderReaderLog();
   if (displayedPanel === "month") renderMonth();
   renderReaderStatus();
+  if (first) queueReaderView();
 }
 
 async function readShared() {
@@ -3990,6 +4160,8 @@ async function unlockReader(event, linkCode = null) {
       lastReaderCheck = Date.now();
     }
     readerKey = key;
+    readerViewProof = VIEW_LOG_ENDPOINT && !legacySnapshot && readerRepo === VIEW_LOG_REPO
+      ? await viewLogProof(code).catch(() => undefined) : undefined;
     rememberReader = !linked && !legacySnapshot && $("remember-code").checked;
     $("reader-gate-form").reset();
     status("reader-gate-message");
@@ -4017,6 +4189,7 @@ async function lockReader() {
   if (!readerRemembered || control.disabled) return;
   control.disabled = true;
   readerGeneration += 1;
+  readerViewProof = undefined;
   const wasRemembering = rememberReader;
   rememberReader = false;
   readerWork = true;
@@ -4096,6 +4269,7 @@ async function initReader() {
       if (cached?.key && cached.text) {
         const snapshot = await openArchive(cached.key, readerRepo, cached.text);
         readerKey = cached.key;
+        readerViewProof = cached.viewProof;
         rememberReader = true;
         readerRemembered = true;
         readerEnvelope = cached.text;
