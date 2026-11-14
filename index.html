@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Zh/wK59pD9NA5r/Qo7XakDUdog1q9feTP3KJnyAuKBk='; style-src 'sha256-fWN/f2QZydrfzY5AUbFebNwHI0/3NB4124GAS+tirtw='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Qby4XPKPMTUy1wGS7Qrw7YE8r1wF5kMY/8c2riqOd84='; style-src 'sha256-fWN/f2QZydrfzY5AUbFebNwHI0/3NB4124GAS+tirtw='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -1740,8 +1740,8 @@ async function syncRemote(state, resolution) {
 const $ = (id) => document.getElementById(id);
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MOODS = [
-  { label: "良くない", face: "#eadbd8", bar: "#ab746c", mouth: "M11 24q5-6 10 0" },
-  { label: "少し良くない", face: "#f0e1d6", bar: "#c48e6a", mouth: "M11 23q5-3 10 0" },
+  { label: "良くない", face: "#eadbd8", bar: "#ab746c", mouth: "M10.5 24.5Q16 16 21.5 24.5", brows: "M9 10.5l4.5-2.5m5 0 4.5 2.5" },
+  { label: "少し良くない", face: "#f0e1d6", bar: "#c48e6a", mouth: "M11 21.5Q16.5 19.5 21 23" },
   { label: "ふつう", face: "#eee9d8", bar: "#c6b48b", mouth: "M12 22h8" },
   { label: "少し良い", face: "#e3ebd6", bar: "#9dad77", mouth: "M11 20q5 5 10 0" },
   { label: "良い", face: "#f4e2ad", bar: "#60865b", mouth: "M10 19h12q-6 11-12 0Z" }
@@ -1812,12 +1812,14 @@ function svgNode(tag, attributes) {
 function face(value) {
   const mood = MOODS[value - 1];
   const svg = svgNode("svg", { viewBox: "0 0 32 32", class: "mood-face", "aria-hidden": "true" });
+  const expressionStroke = { fill: "none", stroke: "#374a39", "stroke-width": 1.5, "stroke-linecap": "round", "stroke-linejoin": "round" };
   svg.append(
     svgNode("circle", { cx: 16, cy: 16, r: 14, fill: mood.face, stroke: "#52634d", "stroke-width": 1.25 }),
     svgNode("circle", { cx: 11.5, cy: 13, r: 1.25, fill: "#374a39" }),
     svgNode("circle", { cx: 20.5, cy: 13, r: 1.25, fill: "#374a39" }),
-    svgNode("path", { d: mood.mouth, fill: "none", stroke: "#374a39", "stroke-width": 1.5, "stroke-linecap": "round", "stroke-linejoin": "round" })
+    svgNode("path", { d: mood.mouth, ...expressionStroke })
   );
+  if (mood.brows) svg.append(svgNode("path", { d: mood.brows, ...expressionStroke }));
   return svg;
 }
 
