@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Qby4XPKPMTUy1wGS7Qrw7YE8r1wF5kMY/8c2riqOd84='; style-src 'sha256-fWN/f2QZydrfzY5AUbFebNwHI0/3NB4124GAS+tirtw='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-5T/VQupMIw599iGn3e+EnQFZL+cK/YTiVbIoTmYNABM='; style-src 'sha256-MZe85S1RCZldHaY0E0HiLPLUVrj7yGf92lQ6xcWcEC0='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -610,6 +610,10 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .memo-details .note-field { margin-top: 0; }
 .memo-details .note-field > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .memo-details .note-count { margin-bottom: 9px; }
+.private-memo { margin-top: 16px; border-top: 1px solid var(--line); }
+.private-memo > summary { min-height: 44px; padding-block: 10px; font-weight: 680; }
+.private-memo-actions { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 8px; }
+.private-memo textarea { min-height: 8em; }
 .day-tools { margin-top: 10px; font-size: .76rem; color: var(--muted); }
 .day-tools > summary { min-height: 40px; padding: 8px 0; }
 .sync-details { margin-top: 0; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 10px 9px; }
@@ -992,6 +996,42 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
             </fieldset>
             <p class="message" id="save-message" role="status"></p>
           </form>
+          <details class="private-memo" id="private-memo">
+            <summary>自分用メモ</summary>
+            <p class="muted">日付に関係なく使える、閲覧用ページには表示されないメモです。</p>
+            <div id="private-memo-connect">
+              <p class="muted">スマホとPCで使うには、先にGitHubの保存先につないでください。</p>
+              <button type="button" class="button secondary" id="private-memo-share">共有設定を開く</button>
+            </div>
+            <div id="private-memo-setup" hidden>
+              <button type="button" class="button primary" id="private-memo-create">自分用メモを作る</button>
+              <form id="private-memo-join" hidden>
+                <label class="field">
+                  <span>自分用メモの連携コード</span>
+                  <input type="password" id="private-memo-join-code" maxlength="22" required autocomplete="off" autocapitalize="none" spellcheck="false">
+                </label>
+                <button type="submit" class="button primary">この端末で開く</button>
+              </form>
+            </div>
+            <form id="private-memo-form" hidden>
+              <label class="field">
+                <span>メモ本文</span>
+                <textarea id="private-memo-text" rows="6" maxlength="20000" autocomplete="off" spellcheck="false"></textarea>
+              </label>
+              <div class="private-memo-actions">
+                <button type="submit" class="button primary" id="private-memo-save">メモを保存</button>
+                <button type="button" class="text-button" id="private-memo-refresh">最新を読み込む</button>
+              </div>
+              <details class="setup-guide" id="private-memo-link">
+                <summary>PC・スマホでも開く</summary>
+                <p class="muted">同じGitHubの保存先につないだ端末で、このコードを一度だけ入力します。</p>
+                <button type="button" class="text-button" id="private-memo-copy">連携コードをコピー</button>
+                <input type="text" id="private-memo-copy-value" aria-label="自分用メモの連携コード" readonly hidden>
+              </details>
+            </form>
+            <button type="button" class="text-button" id="private-memo-retry" hidden>読み込みをやり直す</button>
+            <p class="message" id="private-memo-status" role="status"></p>
+          </details>
         </section>
 
         <aside class="sidebar">
@@ -1475,6 +1515,7 @@ async function replaceOwnerPin(database, settings, loaded, pin) {
 
 const API = "https://api.github.com";
 const CLOUD_FILE = "hibi-journal.enc.json";
+const PRIVATE_MEMO_FILE = "hibi-private-memo.enc.json";
 const MAX_CLOUD_BYTES = 900000;
 const MAX_PLAINTEXT = 12000000;
 
@@ -1650,9 +1691,9 @@ async function verifyRepo(repo, token) {
   if (details.full_name?.toLowerCase() !== repo) throw new Error("リポジトリ名を確認してください。");
 }
 
-async function readRemote(repo, token) {
+async function readRemote(repo, token, file = CLOUD_FILE) {
   try {
-    const result = await github(repoPath(repo) + "/contents/" + CLOUD_FILE, { token });
+    const result = await github(repoPath(repo) + "/contents/" + file, { token });
     if (result.type !== "file" || result.encoding !== "base64" || typeof result.sha !== "string"
       || typeof result.content !== "string" || result.size > MAX_CLOUD_BYTES
       || result.content.length > 1300000) {
@@ -1667,9 +1708,13 @@ async function readRemote(repo, token) {
 }
 
 function writeRemote(repo, token, text, previous) {
-  return github(repoPath(repo) + "/contents/" + CLOUD_FILE, {
+  return writeRemoteFile(repo, token, CLOUD_FILE, "Update encrypted journal", text, previous?.sha);
+}
+
+function writeRemoteFile(repo, token, file, message, text, sha) {
+  return github(repoPath(repo) + "/contents/" + file, {
     token, method: "PUT",
-    body: { message: "Update encrypted journal", content: btoa(text), ...(previous ? { sha: previous.sha } : {}) }
+    body: { message, content: btoa(text), ...(sha ? { sha } : {}) }
   });
 }
 
@@ -3089,6 +3134,7 @@ function renderOwnerConnection() {
     : "GitHubをつなぐと、全日分を共有できます。";
   $("connect").disabled = Boolean(working) || location.protocol !== "https:";
   for (const id of ["sync-now", "update-token", "disconnect", "lock"]) $(id).disabled = Boolean(working) || activitySavePending;
+  renderPrivateMemo();
   refreshEditorControls();
   if (["sync", "connect", "token"].includes(working)) syncPill("同期中", "wait");
   else if (syncIssue) syncPill("同期を確認", "error");
@@ -3540,7 +3586,14 @@ async function updateToken(event) {
 }
 
 async function disconnect() {
-  if (working || !ownerState?.cloud || !window.confirm("この端末からGitHubとの接続を解除しますか？")) return;
+  if (working || privateMemoBusy || !ownerState?.cloud) return;
+  if (privateMemoDirty()) {
+    setPanel("main", true);
+    $("private-memo").open = true;
+    status("private-memo-status", "接続を解除する前に、メモの変更を保存してください。", true);
+    return;
+  }
+  if (!window.confirm("この端末からGitHubとの接続を解除しますか？")) return;
   try {
     await runOwnerOperation("save", async () => {
       await persistState({ ...ownerState, cloud: null });
@@ -3631,8 +3684,211 @@ async function copyField(id, label) {
   }
 }
 
+let privateMemoRepo;
+let privateMemoRemote;
+let privateMemoMode;
+let privateMemoBusy = false;
+
+function privateMemoDirty() {
+  return Boolean(privateMemoRemote && $("private-memo-text").value !== privateMemoRemote.body);
+}
+
+function resetPrivateMemo() {
+  privateMemoRemote = undefined;
+  privateMemoMode = undefined;
+  $("private-memo-form").reset();
+  $("private-memo-join").reset();
+  $("private-memo-link").open = false;
+  $("private-memo-copy-value").value = "";
+  $("private-memo-copy-value").hidden = true;
+  status("private-memo-status");
+}
+
+function renderPrivateMemo() {
+  const repo = ownerState?.cloud?.repo;
+  if (repo !== privateMemoRepo) {
+    resetPrivateMemo();
+    privateMemoRepo = repo;
+  }
+  $("private-memo-connect").hidden = Boolean(repo);
+  $("private-memo-setup").hidden = !repo || !["create", "join"].includes(privateMemoMode);
+  $("private-memo-create").hidden = privateMemoMode !== "create";
+  $("private-memo-join").hidden = privateMemoMode !== "join";
+  $("private-memo-form").hidden = !privateMemoRemote;
+  $("private-memo-retry").hidden = !repo || privateMemoMode !== "retry";
+  const busy = privateMemoBusy || Boolean(working) || activitySavePending;
+  for (const id of ["private-memo-create", "private-memo-refresh", "private-memo-retry", "private-memo-join-code"]) {
+    $(id).disabled = busy;
+  }
+  $("private-memo-join").querySelector("button").disabled = busy;
+  $("private-memo-text").readOnly = privateMemoBusy;
+  $("private-memo-save").disabled = busy || !privateMemoDirty();
+  $("lock").disabled = busy;
+}
+
+async function privateMemoKey(code, cloud) {
+  if (!validCode(code) || code === cloud.code) throw new Error("Invalid private memo code");
+  return importCode(code, ["encrypt", "decrypt"]);
+}
+
+function privateMemoContext(repo) {
+  return "hibi-private-memo-v1:" + repo;
+}
+
+async function openPrivateMemo(file, code, cloud) {
+  const key = await privateMemoKey(code, cloud);
+  const record = await unseal(key, file.text, privateMemoContext(cloud.repo));
+  if (!limitedText(record?.body, 20000)) throw new Error("Invalid private memo");
+  return { sha: file.sha, body: record.body };
+}
+
+async function storePrivateMemo(cloud, code, body, sha) {
+  const key = await privateMemoKey(code, cloud);
+  const box = await seal(key, { body }, privateMemoContext(cloud.repo));
+  const result = await writeRemoteFile(cloud.repo, cloud.token, PRIVATE_MEMO_FILE, "Update encrypted private memo", box, sha);
+  if (!result.content?.sha) throw new Error("Missing private memo revision");
+  return { sha: result.content.sha, body };
+}
+
+async function privateMemoAction(action) {
+  if (privateMemoBusy || !ownerKey || !ownerState?.cloud) return;
+  privateMemoBusy = true;
+  renderPrivateMemo();
+  status("private-memo-status", "GitHubに接続しています…");
+  try {
+    const current = ownerOperationDone;
+    if (current) await current;
+    const cloud = ownerState.cloud;
+    const done = await runOwnerOperation("private-memo", () => action(cloud, ownerState.privateMemoCodes?.[cloud.repo]));
+    if (!done) throw new Error("Private memo busy");
+  } catch (error) {
+    if (!privateMemoRemote && !privateMemoMode) privateMemoMode = "retry";
+    status("private-memo-status", error instanceof RecordConflict ? ownerError(error)
+      : "メモの操作を完了できませんでした。通信とGitHubの接続を確認してください。", true);
+  } finally {
+    privateMemoBusy = false;
+    renderPrivateMemo();
+  }
+}
+
+function showPrivateMemo(record) {
+  privateMemoMode = undefined;
+  privateMemoRemote = record;
+  $("private-memo-text").value = record.body;
+}
+
+async function loadPrivateMemo() {
+  if (privateMemoBusy || !ownerState?.cloud) return;
+  if (privateMemoDirty() && !window.confirm("入力中の内容を破棄して、GitHubの最新のメモを読み込みますか？")) return;
+  await privateMemoAction(async (cloud, code) => {
+    const file = await readRemote(cloud.repo, cloud.token, PRIVATE_MEMO_FILE);
+    if (!file) {
+      if (privateMemoRemote) {
+        status("private-memo-status", "GitHubにメモのファイルが見つかりません。画面の本文は残しています。", true);
+        return;
+      }
+      privateMemoMode = "create";
+      status("private-memo-status");
+      return;
+    }
+    if (validCode(code)) {
+      try {
+        showPrivateMemo(await openPrivateMemo(file, code, cloud));
+        status("private-memo-status", "最新のメモを読み込みました。");
+        return;
+      } catch {
+        if (privateMemoRemote) {
+          status("private-memo-status", "GitHubのメモを開けませんでした。画面の本文は残しています。", true);
+          return;
+        }
+      }
+    }
+    privateMemoMode = "join";
+    status("private-memo-status", "もう一方の端末で「PC・スマホでも開く」を開き、連携コードをコピーしてください。");
+  });
+}
+
+async function setUpPrivateMemo(input) {
+  await privateMemoAction(async (cloud, savedCode) => {
+    const file = await readRemote(cloud.repo, cloud.token, PRIVATE_MEMO_FILE);
+    if (Boolean(file) !== Boolean(input)) {
+      privateMemoMode = file ? "join" : "create";
+      status("private-memo-status", file ? "すでにメモがあります。作成した端末の連携コードを入力してください。"
+        : "まだメモがありません。先にどちらかの端末で作ってください。", true);
+      return;
+    }
+    const code = input || (validCode(savedCode) && savedCode !== cloud.code ? savedCode : generateCode());
+    let record;
+    if (file) {
+      try {
+        record = await openPrivateMemo(file, code, cloud);
+      } catch {
+        status("private-memo-status", "自分用メモの連携コードを確認してください。", true);
+        return;
+      }
+    }
+    if (code !== savedCode) {
+      const privateMemoCodes = { ...ownerState.privateMemoCodes, [cloud.repo]: code };
+      await persistState({ ...ownerState, privateMemoCodes });
+    }
+    showPrivateMemo(record ?? await storePrivateMemo(cloud, code, ""));
+    $("private-memo-join").reset();
+    status("private-memo-status", file ? "この端末で自分用メモを開きました。" : "自分用メモを作りました。");
+  });
+}
+
+async function savePrivateMemo(event) {
+  event.preventDefault();
+  if (!privateMemoDirty() || !limitedText($("private-memo-text").value, 20000)) return;
+  const body = $("private-memo-text").value;
+  await privateMemoAction(async (cloud, code) => {
+    const file = await readRemote(cloud.repo, cloud.token, PRIVATE_MEMO_FILE);
+    if (!file) {
+      status("private-memo-status", "GitHubにメモのファイルが見つかりません。入力した本文は残しています。", true);
+      return;
+    }
+    if (file.sha !== privateMemoRemote.sha) {
+      const newest = await openPrivateMemo(file, code, cloud);
+      if (newest.body === body) {
+        showPrivateMemo(newest);
+        status("private-memo-status", "この内容はGitHubに保存済みです。");
+      } else {
+        status("private-memo-status", "別の端末でメモが更新されました。必要なら入力中の本文をコピーしてから、最新を読み込んでください。", true);
+      }
+      return;
+    }
+    try {
+      showPrivateMemo(await storePrivateMemo(cloud, code, body, file.sha));
+      status("private-memo-status", "保存しました。別の端末でも開けます。");
+    } catch (error) {
+      if (!(error instanceof GitHubError) || ![409, 422].includes(error.status)) throw error;
+      status("private-memo-status", "GitHubのメモが更新された可能性があります。入力は残しています。", true);
+    }
+  });
+}
+
+async function copyPrivateMemoCode() {
+  const code = ownerState?.privateMemoCodes?.[privateMemoRepo];
+  if (!privateMemoRemote || !validCode(code)) return;
+  try {
+    await navigator.clipboard.writeText(code);
+    status("private-memo-status", "連携コードをコピーしました。");
+  } catch {
+    if (!privateMemoRemote) return;
+    const field = $("private-memo-copy-value");
+    field.value = code;
+    field.hidden = false;
+    field.focus();
+    field.select();
+    status("private-memo-status", "連携コードを選択しました。端末のコピー操作を使ってください。");
+  }
+}
+
 function lockOwner() {
-  if (working || activitySavePending || ((editorDirty() || activityDraftDirty()) && !window.confirm("保存前の入力があります。日記を閉じますか？"))) return;
+  if (working || activitySavePending || privateMemoBusy
+    || ((editorDirty() || activityDraftDirty() || privateMemoDirty()) && !window.confirm("保存前の入力があります。日記を閉じますか？"))) return;
+  $("private-memo").open = false;
+  resetPrivateMemo();
   debugEvents.length = 0;
   $("debug-output").value = "";
   $("debug-output").hidden = true;
@@ -3678,6 +3934,27 @@ async function initOwner() {
       radio.addEventListener("change", () => { if (radio.checked) queueQuickSave("outside", radio.value); });
     }
     $("owner-gate-form").addEventListener("submit", unlockOwner);
+    $("private-memo").addEventListener("toggle", () => {
+      if ($("private-memo").open && !privateMemoDirty()) void loadPrivateMemo();
+      if (!$("private-memo").open) {
+        $("private-memo-copy-value").value = "";
+        $("private-memo-copy-value").hidden = true;
+      }
+    });
+    $("private-memo-share").addEventListener("click", () => setPanel("share", true));
+    $("private-memo-retry").addEventListener("click", loadPrivateMemo);
+    $("private-memo-refresh").addEventListener("click", loadPrivateMemo);
+    $("private-memo-create").addEventListener("click", () => void setUpPrivateMemo(""));
+    $("private-memo-join").addEventListener("submit", (event) => {
+      event.preventDefault();
+      void setUpPrivateMemo($("private-memo-join-code").value.trim());
+    });
+    $("private-memo-form").addEventListener("submit", savePrivateMemo);
+    $("private-memo-text").addEventListener("input", () => {
+      renderPrivateMemo();
+      status("private-memo-status", privateMemoDirty() ? "未保存の変更があります。" : "");
+    });
+    $("private-memo-copy").addEventListener("click", copyPrivateMemoCode);
     $("editor-form").addEventListener("submit", saveEntry);
     $("editor-form").addEventListener("input", () => {
       refreshEditorControls();
@@ -3785,7 +4062,7 @@ async function initOwner() {
       if (ownerState?.cloud && hasPending(ownerState)) void synchronize({ quiet: true });
     });
     window.addEventListener("beforeunload", (event) => {
-      if (ownerKey && (editorDirty() || activityDraftDirty())) {
+      if (ownerKey && (editorDirty() || activityDraftDirty() || privateMemoDirty())) {
         event.preventDefault();
         event.returnValue = "";
       }
