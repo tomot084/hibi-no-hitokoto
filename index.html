@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-5T/VQupMIw599iGn3e+EnQFZL+cK/YTiVbIoTmYNABM='; style-src 'sha256-MZe85S1RCZldHaY0E0HiLPLUVrj7yGf92lQ6xcWcEC0='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u6FxthHpFSXqHkjkMeVH4fUDgfHgpGn9CSBayjAea1Y='; style-src 'sha256-MZe85S1RCZldHaY0E0HiLPLUVrj7yGf92lQ6xcWcEC0='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -929,6 +929,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                     <button type="button" class="button secondary" data-action="仕事" data-reuse-time aria-pressed="false">仕事</button>
                     <button type="button" class="button secondary" data-action="睡眠" data-reuse-time aria-pressed="false">睡眠</button>
                     <button type="button" class="button secondary" data-action="外出" data-reuse-time aria-pressed="false">外出</button>
+                    <button type="button" class="button secondary" data-action="欠勤" aria-pressed="false">欠勤</button>
                   </div>
                   <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
                   <div class="work-break-control" id="quick-work-break" hidden>
@@ -2380,8 +2381,10 @@ function bindViews() {
 let refreshTimePresets = () => {};
 
 function activityComposerDraft() {
+  const action = $("quick-action").value.trim();
+  if (action === "欠勤") return { action, start: "", end: "", place: "" };
   return activityWithBreak({ start: $("quick-start").value, end: $("quick-end").value,
-    place: $("quick-place").value.trim(), action: $("quick-action").value.trim() }, $("quick-break-minutes").value);
+    place: $("quick-place").value.trim(), action }, $("quick-break-minutes").value);
 }
 
 function activityDraftDirty() {
@@ -2481,7 +2484,10 @@ function bindTimePicker() {
       .filter(Boolean).join(" · ");
     $("quick-preview").textContent = preview || "時間・場所を入れる（任意）";
     detailsLabel.dataset.filled = String(Boolean(preview));
-    $("add-selected-time").textContent = sleep ? "睡眠を保存" : "この行動を保存";
+    const absent = action === "欠勤";
+    details.hidden = absent;
+    $("quick-time-error").hidden = absent;
+    $("add-selected-time").textContent = absent ? "欠勤を保存" : sleep ? "睡眠を保存" : "この行動を保存";
     renderWorkBreakInput($("quick-work-break"), draft);
     $("add-selected-time").disabled = !canSaveComposer(draft);
     for (const preset of presets) preset.setAttribute("aria-pressed", String(preset === selected));
@@ -3212,6 +3218,11 @@ function sameActivity(left, right) {
   return sameActivitySlot(left, right) && left.breakMinutes === right.breakMinutes;
 }
 
+function hasDuplicateActivity(activities, activity) {
+  return Boolean(activity.start || activity.end || activity.action === "欠勤")
+    && activities.some((item) => sameActivity(item, activity));
+}
+
 const EDIT_EXISTING_WORK = "同じ時間帯の仕事があります。一覧の「編集」から休憩の合計を変更できます。";
 
 function shouldMarkOutside(activity, savedOutside, draftOutside) {
@@ -3314,7 +3325,7 @@ async function saveNewActivity(activity, date = editDate) {
     status("activity-save-message", EDIT_EXISTING_WORK, true);
     return false;
   }
-  if ((activity.start || activity.end) && day.activities.some((item) => sameActivity(item, activity))) {
+  if (hasDuplicateActivity(day.activities, activity)) {
     debugEvent("activity-already-saved");
     // A committed record can be missing from the draft list (for example after
     // an uncommitted removal). A retry must reconcile the UI, not strand it.
@@ -3404,8 +3415,7 @@ async function saveEntry(event, syncAfter = true, includeActivity = false) {
         status("save-message", EDIT_EXISTING_WORK, true);
         return false;
       }
-      const duplicate = (activity.start || activity.end) && draft.activities.some((item) => sameActivity(item, activity));
-      if (!duplicate) {
+      if (!hasDuplicateActivity(draft.activities, activity)) {
         if (draft.activities.length >= MAX_ACTIVITIES) {
           status("save-message", "行動は1日16件まで保存できます。", true);
           return false;
@@ -4418,4 +4428,3 @@ if (!globalThis.crypto?.subtle) {
 </script>
 </body>
 </html>
-
