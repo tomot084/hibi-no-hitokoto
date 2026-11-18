@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-JHX9vmmFq2ffXL8tcAjT1eIenEj3ygSTYbpwkogae/g='; style-src 'sha256-ZcqmLETw/TkGpj5gN65OqwkGZvD5meJMjGeS7aKxqsg='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-abPIGa3RsIc04fRj5Pmeb7WxDtC+WlB1ToovHTIvoac='; style-src 'sha256-YgZ1YdNnLHa1L15xQSxKWg1q8HxhWztvbACawErzIJE='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -312,6 +312,8 @@ legend { padding: 0; }
 .timeline-line .timeline-time { overflow-wrap: anywhere; }
 .timeline-time { color: var(--green); font-size: .91rem; font-weight: 750; font-variant-numeric: tabular-nums; }
 .timeline-place { color: var(--muted); font-size: .84rem; overflow-wrap: anywhere; }
+.timeline-context { color: var(--muted); font-size: .78rem; }
+.reader-day-links { display: flex; flex-wrap: wrap; gap: 0 6px; margin-top: 12px; }
 .calendar-nav { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; margin: 10px 0; text-align: center; }
 .calendar-nav p { font-weight: 760; font-size: 1.16rem; font-variant-numeric: tabular-nums; }
 .weekday-row, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; }
@@ -417,6 +419,13 @@ legend { padding: 0; }
 .conflict-option:has(input:checked) { background: var(--green-soft); border-color: var(--green); }
 .conflict-option > span { font-size: .84rem; font-weight: 700; }
 .conflict-option p { margin: 5px 0 0; font-size: .78rem; white-space: pre-wrap; }
+.conflict-field { margin-block: 10px; }
+.conflict-field legend { color: var(--muted); font-size: .82rem; margin-bottom: 5px; }
+@media (max-width: 550px) {
+  .conflict-row { grid-template-columns: minmax(0, 1fr); }
+  .conflict-option { grid-template-columns: auto 1fr; align-items: baseline; column-gap: 8px; min-height: 44px; }
+  .conflict-option p { grid-column: 2; }
+}
 main { padding-bottom: max(17px, env(safe-area-inset-bottom)); }
 
 @media (max-width: 760px) {
@@ -674,25 +683,33 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 #reader-refresh-feedback { color: var(--muted); font-size: .73rem; text-align: right; }
 #reader-refresh-feedback:empty { display: none; }
 
-.trend-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; padding-block: 8px; }
-.trend-row > svg { grid-column: 1 / -1; grid-row: 2; }
-.trend-count { grid-column: 2; grid-row: 1; }
+.trend-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; padding-block: 8px; }
+.trend-row > svg { grid-column: 1 / -1; }
+.trend-outside { grid-column: 1 / -1; color: var(--muted); }
 
 .reader-record-label { margin-bottom: 4px; color: var(--muted); font-size: .78rem; font-weight: 700; }
 .reader-record-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 12px; margin-bottom: 4px; }
 .reader-record-header h2 { margin-bottom: 0; }
 .reader-record-nav { display: flex; flex-wrap: wrap; gap: 0 4px; }
 .reader-record-nav .text-button { color: var(--green); text-decoration: underline; text-underline-offset: .2em; }
-.reader-overview { border-top: 3px solid var(--green); }
+.reader-overview { border-top: 3px solid var(--green); container-type: inline-size; }
 .reader-overview h2 { font-size: 1.25rem; }
 #reader-window { font-size: .82rem; margin-top: 6px; }
 #reader-outside-summary { font-size: .82rem; margin-top: 8px; }
-.recent-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 16px; }
-.recent-day { min-height: 92px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px 1px; border: 1px solid transparent; border-radius: 6px; background: transparent; font-size: .75rem; }
+.recent-days { display: grid; gap: 3px; margin-top: 12px; }
+.recent-day { min-height: 44px; min-width: 0; display: grid; grid-template-columns: 3.2em minmax(0, 1fr); align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: transparent; font-size: .8rem; text-align: left; }
 .recent-day[aria-pressed="true"] { border-color: var(--green); background: var(--green-soft); }
-.recent-day .mood-face { width: 29px; height: 29px; }
-.recent-day small { font-size: .72rem; overflow-wrap: anywhere; }
-.recent-unrated { height: 29px; color: var(--muted); }
+.recent-day time { font-weight: 650; font-variant-numeric: tabular-nums; }
+.recent-day-content, .recent-day-mood { display: flex; align-items: center; gap: 4px 7px; flex-wrap: wrap; min-width: 0; }
+.recent-day .mood-face { width: 24px; height: 24px; }
+.recent-day-outside, .recent-day-empty { color: var(--muted); }
+.recent-day-outside { font-size: .94em; }
+@container (min-width: 417px) {
+  .recent-days { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .recent-day { grid-template-columns: minmax(0, 1fr); align-content: start; justify-items: center; gap: 4px; padding: 6px 3px; text-align: center; line-height: 1.35; }
+  .recent-day-content, .recent-day-mood { flex-direction: column; gap: 3px; }
+  .recent-day-outside { overflow-wrap: anywhere; }
+}
 .month-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .review-numbers { margin-top: 12px; border-top: 1px solid var(--line); }
 .review-numbers summary, .week-numbers summary { min-height: 44px; padding-block: 10px; font-size: .78rem; color: var(--muted); }
@@ -711,6 +728,10 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 #mood-save-feedback, #outside-save-feedback { font-size: .8rem; }
 #mood-save-feedback { margin-top: 6px; }
 #mood-save-feedback:empty, #outside-save-feedback:empty { display: none; }
+.outside-conflict { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 9px; margin-top: 4px; font-size: .8rem; }
+.outside-conflict .text-button { padding-inline: 3px; text-decoration: underline; text-underline-offset: .2em; }
+.activity-time-error { color: var(--danger); font-size: .8rem; margin-bottom: 8px; }
+.activity-time-error:empty { display: none; }
 #activity-notice:not(:empty), #activity-saved-notice:not(:empty) { display: block; margin-block: 6px; }
 #activity-saved-notice { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
 #time-composer > summary { color: var(--green); overflow-wrap: anywhere; }
@@ -769,6 +790,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 .activity-overview { --overview-label: 4.6em; margin: 12px 2px 8px; font-size: .75rem; }
 .activity-overview-row { display: grid; grid-template-columns: var(--overview-label) minmax(0, 1fr); align-items: center; gap: 6px; min-height: 22px; }
 .activity-overview-name { overflow-wrap: anywhere; color: var(--ink); line-height: 1.2; }
+.activity-overview-name small { display: block; color: var(--muted); margin-top: 1px; }
 .activity-overview svg { display: block; width: 100%; }
 .activity-overview-hours { grid-column: 2; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); color: var(--muted); font-size: .7rem; white-space: nowrap; }
 .activity-overview-hours span + span { grid-row: 1; grid-column: var(--hour-column) / span 2; justify-self: center; }
@@ -924,6 +946,10 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                 <div class="outside-feedback">
                   <p class="muted" id="outside-save-feedback" role="status"></p>
                   <button type="button" class="text-button" id="clear-outside" aria-label="外出を未記録に戻す" hidden>未記録に戻す</button>
+                </div>
+                <div class="outside-conflict" id="outside-conflict" hidden>
+                  <p>この日に外出の記録があります。</p>
+                  <button type="button" class="text-button" id="correct-outside">「外に出た」に変更</button>
                 </div>
               </fieldset>
 
@@ -1248,7 +1274,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
       <div><p class="overline">同期の確認</p><h2 id="conflict-title">残す記録を選ぶ</h2></div>
       <button type="button" class="text-button" id="close-conflict">あとで</button>
     </div>
-    <p class="muted">同じ日が別の端末でも更新されました。日付ごとに残す内容を選べます。</p>
+    <p class="muted">両方の端末で変更された内容から、残す方を選んでください。</p>
     <form id="conflict-form">
       <div id="conflict-choices"></div>
       <button type="submit" class="button primary full">選んだ記録を同期</button>
@@ -1271,6 +1297,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
           <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
           <label class="field"><span class="end-time-label">終了</span><input type="time" class="end-time" step="60"></label>
         </div>
+        <p class="activity-time-error" role="status"></p>
         <div class="work-break-control" hidden>
           <label class="field"><span>休憩の合計（分・任意）</span><input class="break-minutes" type="text" inputmode="numeric" maxlength="4" placeholder="例：60"></label>
           <p class="work-break-status" role="status"></p>
@@ -1468,8 +1495,10 @@ function dayWithoutRevision(day) {
 }
 
 function dayEquals(left, right) {
-  return left?.rev === right?.rev
-    || JSON.stringify(dayWithoutRevision(left)) === JSON.stringify(dayWithoutRevision(right));
+  if (!left || !right) return !left && !right;
+  return Boolean(left.rev && left.rev === right.rev)
+    || (left.date === right.date && left.mood === right.mood && left.note === right.note
+      && (left.outside ?? null) === (right.outside ?? null) && sameActivities(left.activities, right.activities));
 }
 
 async function loadOwnerState(database, key) {
@@ -1547,9 +1576,10 @@ class GitHubError extends Error {
 }
 
 class CloudConflict extends Error {
-  constructor(conflicts, local, remote) {
+  constructor(fields, local, remote) {
     super("同じ日がこの端末とGitHubの両方で更新されました。");
-    this.conflicts = conflicts;
+    this.fields = fields;
+    this.conflicts = Object.keys(fields).sort().reverse();
     this.local = local;
     this.remote = remote;
   }
@@ -1749,29 +1779,90 @@ function hasPending(state) {
     || Object.entries(days).some(([date, day]) => cloud.base[date] !== day.rev);
 }
 
-function mergeDays(local, remote, base, resolution) {
-  const merged = {};
+const SYNC_DAY_FIELDS = { mood: "気分", outside: "外出", activities: "行動", note: "共有メモ" };
+
+function trackSyncBase(current, next) {
+  const cloud = next.cloud;
+  if (!cloud || cloud !== current.cloud || next.days === current.days) return next;
+  // Keep the last synced copy of a day only while this device has changed it.
+  let baseDays;
+  for (const [date, before] of Object.entries(current.days)) {
+    if (before.rev === cloud.base[date] && next.days[date]?.rev !== before.rev) {
+      baseDays ??= { ...cloud.baseDays };
+      baseDays[date] = before;
+    }
+  }
+  return baseDays ? { ...next, cloud: { ...cloud, baseDays } } : next;
+}
+
+function mergeActivityAdditions(base, local, remote) {
+  const ours = activityChanges(base, local);
+  const theirs = activityChanges(base, remote);
+  if (ours.removed || theirs.removed) return null;
+  if (ours.added.some((activity) => activity.action === "仕事" && activity.start && activity.end
+    && theirs.added.some((other) => sameActivitySlot(activity, other) && !sameActivity(activity, other)))) return null;
+  const additions = ours.added.filter((activity) => !hasDuplicateActivity(theirs.added, activity));
+  const combined = [...remote, ...additions];
+  return combined.length <= MAX_ACTIVITIES ? sortedActivities(combined) : null;
+}
+
+function mergeDayFields(local, remote, base, choices = {}) {
+  const ours = dayWithoutRevision(local);
+  const theirs = dayWithoutRevision(remote);
+  const before = dayWithoutRevision(base) ?? { mood: null, outside: null, activities: [], note: "" };
+  const day = { date: local.date };
   const conflicts = [];
+  for (const field of Object.keys(SYNC_DAY_FIELDS)) {
+    const equal = field === "activities" ? sameActivities : Object.is;
+    const left = ours[field];
+    const right = theirs[field];
+    const previous = before[field];
+    if (equal(left, right) || equal(left, previous)) day[field] = right;
+    else if (equal(right, previous)) day[field] = left;
+    else {
+      const combined = field === "activities" ? mergeActivityAdditions(previous, left, right) : null;
+      if (combined) day[field] = combined;
+      else if (choices[field] === "local" || choices[field] === "remote") day[field] = choices[field] === "local" ? left : right;
+      else conflicts.push(field);
+    }
+  }
+  return { day, conflicts };
+}
+
+function mergeDays(local, remote, cloud, resolution) {
+  const merged = {};
+  const conflicts = {};
   const dates = new Set([...Object.keys(local), ...Object.keys(remote)]);
   for (const date of dates) {
     const ours = local[date];
     const theirs = remote[date];
-    const previous = base[date];
+    const previous = cloud.base[date];
     let record;
     if (dayEquals(ours, theirs)) record = theirs;
     else if (theirs?.rev === previous) record = ours;
     else if (ours?.rev === previous) record = theirs;
     else {
       const decision = resolution?.[date];
-      if (decision && decision.local === ours?.rev && decision.remote === theirs?.rev) {
-        record = decision.choice === "local" ? ours : theirs;
+      const choices = decision?.local === ours?.rev && decision?.remote === theirs?.rev ? decision?.choices : undefined;
+      const saved = cloud.baseDays?.[date];
+      const ancestor = saved?.rev === previous && saved?.date === date && validDay(saved) ? saved : null;
+      if (ours && theirs && (ancestor || (!previous && cloud.syncedAt))) {
+        const fields = mergeDayFields(ours, theirs, ancestor, choices);
+        if (fields.conflicts.length) conflicts[date] = fields.conflicts;
+        else if (validDay(fields.day)) {
+          if (dayEquals(fields.day, theirs)) record = theirs;
+          else if (dayEquals(fields.day, ours)) record = ours;
+          else record = { ...fields.day, rev: crypto.randomUUID() };
+        }
+      } else if (choices?.day === "local" || choices?.day === "remote") {
+        record = choices.day === "local" ? ours : theirs;
       } else {
-        conflicts.push(date);
+        conflicts[date] = ["day"];
       }
     }
     if (record) merged[date] = record;
   }
-  if (conflicts.length) throw new CloudConflict(conflicts.sort().reverse(), local, remote);
+  if (Object.keys(conflicts).length) throw new CloudConflict(conflicts, local, remote);
   return merged;
 }
 
@@ -1782,20 +1873,20 @@ async function syncRemote(state, resolution) {
     const previous = await readRemote(cloud.repo, cloud.token);
     if (!previous && cloud.syncedAt !== null) throw new Error("GitHubに共有ファイルが見つかりません。共有設定で保存先を確認してください。");
     const remote = previous ? await openArchive(key, cloud.repo, previous.text) : { days: {}, updatedAt: null };
-    const merged = mergeDays(days, remote.days, cloud.base, resolution);
+    const merged = mergeDays(days, remote.days, cloud, resolution);
     const base = revisions(merged);
     const unchanged = previous && Object.keys(remote.days).length === Object.keys(merged).length
       && Object.entries(merged).every(([date, day]) => remote.days[date]?.rev === day.rev);
     if (unchanged) {
-      if (!hasPending(state) && cloud.syncedAt === remote.updatedAt) return state;
-      return { ...state, days: merged, cloud: { ...cloud, base, syncedAt: remote.updatedAt } };
+      if (!hasPending(state) && cloud.syncedAt === remote.updatedAt && !Object.keys(cloud.baseDays ?? {}).length) return state;
+      return { ...state, days: merged, cloud: { ...cloud, base, baseDays: {}, syncedAt: remote.updatedAt } };
     }
 
     const updatedAt = new Date().toISOString();
     const text = await buildArchive(key, cloud.repo, { updatedAt, days: merged });
     try {
       await writeRemote(cloud.repo, cloud.token, text, previous);
-      return { ...state, days: merged, cloud: { ...cloud, base, syncedAt: updatedAt } };
+      return { ...state, days: merged, cloud: { ...cloud, base, baseDays: {}, syncedAt: updatedAt } };
     } catch (error) {
       if (attempt !== 0 || !(error instanceof GitHubError) || ![409, 422].includes(error.status)) throw error;
     }
@@ -1961,6 +2052,10 @@ function activityMinutes({ start, end }) {
   return (clockMinute(end) - clockMinute(start) + 1440) % 1440;
 }
 
+function activityTimeIssue({ start, end }) {
+  return start && start === end ? "開始と終了が同じ時刻です。時刻を直してください。" : "";
+}
+
 function activityWithBreak(activity, rawMinutes) {
   const text = rawMinutes.trim().normalize("NFKC");
   if (activity.action !== "仕事" || !text) return activity;
@@ -2039,7 +2134,17 @@ function appendOvernightDetails(row, activity) {
 
 function activityTimeline(activities, overnight) {
   const list = node("ol", "timeline");
-  const append = (activity, carried = false) => {
+  const entries = [...overnight.map((activity) => ({ activity, carried: true })),
+    ...sortedActivities(activities).map((activity) => ({ activity, carried: false }))];
+  const timed = entries.map(({ activity, carried }) => {
+    const duration = activityMinutes(activity);
+    if (duration === null) return null;
+    const from = carried ? 0 : clockMinute(activity.start);
+    const to = carried ? clockMinute(activity.end) : Math.min(from + duration, 1440);
+    return { from, to };
+  });
+  const contextActions = ["仕事", "外出"];
+  for (const [index, { activity, carried }] of entries.entries()) {
     const row = node("li");
     const line = node("div", "timeline-line");
     const overnightSleep = activity.action === "睡眠" && crossesMidnight(activity);
@@ -2050,17 +2155,44 @@ function activityTimeline(activities, overnight) {
     row.append(line);
     const work = carried ? "" : workTimeText(activity);
     if (work) row.append(node("p", "work-time-summary", work));
+    if (activity.action === "外出" && activity.start && !activity.end) {
+      row.append(node("p", "timeline-context", "帰宅時刻は未記録"));
+    }
+    const range = timed[index];
+    if (range) {
+      const contexts = new Set();
+      for (const [otherIndex, entry] of entries.entries()) {
+        const action = entry.activity.action;
+        const other = timed[otherIndex];
+        if (!other || action === activity.action || !contextActions.includes(action)) continue;
+        if (contextActions.includes(activity.action) && otherIndex > index) continue;
+        if (range.from < other.to && other.from < range.to) contexts.add(action);
+      }
+      if (contexts.size) row.append(node("p", "timeline-context", [...contexts].join("・") + "と時間が重なる"));
+    }
     if (activity.place) row.append(node("p", "timeline-place", activity.place));
     if (carried && !overnightSleep) row.append(node("p", "overnight-meta", "前日 " + activity.start + "に開始"));
     list.append(row);
-  };
-  for (const activity of overnight) append(activity, true);
-  for (const activity of sortedActivities(activities)) append(activity);
+  }
   return list;
 }
 
 function outsideLabel(value) {
   return value === "out" ? "外に出た" : value === "home" ? "家で過ごした" : "未記録";
+}
+
+function hasOutingActivity(day) {
+  return Boolean(day?.activities.some((activity) => activity.action === "外出"));
+}
+
+function dayOutside(day) {
+  return hasOutingActivity(day) ? "out" : day?.outside ?? null;
+}
+
+function dayOutsideText(day, withLabel = false) {
+  const value = dayOutside(day);
+  if (value === "out" && day?.outside !== "out") return "外出の記録あり";
+  return (withLabel ? "外出：" : "") + outsideLabel(value);
 }
 
 function renderDayCard(target, date, allowEdit, latest = false) {
@@ -2094,7 +2226,7 @@ function renderDayCard(target, date, allowEdit, latest = false) {
     const mood = node("p", day?.mood ? "day-mood" : "day-mood unrecorded");
     if (day?.mood) mood.append(face(day.mood));
     mood.append(node("span", "", "気分：" + (day?.mood ? MOODS[day.mood - 1].label : "未記録")));
-    checkin.append(mood, node("p", day?.outside ? "outside-detail" : "outside-detail unrecorded", "外出：" + outsideLabel(day?.outside)));
+    checkin.append(mood, node("p", dayOutside(day) ? "outside-detail" : "outside-detail unrecorded", dayOutsideText(day, true)));
     target.append(checkin);
     if (day?.note) {
       const section = node("section", "day-section");
@@ -2112,14 +2244,31 @@ function renderDayCard(target, date, allowEdit, latest = false) {
       if (chooseEditorDate(date)) setPanel("main", true);
     }));
   }
-  if (target.id === "reader-detail" && (day || overnight.length)) {
+  if (date && (day || overnight.length)) {
+    const links = node("nav", "reader-day-links");
+    links.setAttribute("aria-label", "前後の記録を開く");
+    const inReader = target.id === "reader-detail";
+    const navigate = (destination) => {
+      if (inReader) selectReaderDate(destination);
+      else {
+        selectCalendarDate(destination);
+        target.querySelector("h2").focus({ preventScroll: true });
+        target.scrollIntoView({ block: "start" });
+      }
+    };
+    if (overnight.length) {
+      links.append(button("← 前日の記録へ", "text-button", () => navigate(adjacentDate(date, -1))));
+    }
     const next = adjacentDate(date, 1);
     if (next && overnightActivities(days, next).length) {
-      target.append(button("翌日の続きへ →", "text-button day-edit", () => selectReaderDate(next)));
+      links.append(button("翌日の続きへ →", "text-button", () => navigate(next)));
     }
-    target.append(button("記録一覧へ", "text-button day-edit", () => {
-      $("reader-list-title").focus();
+    if (inReader) links.append(button("記録一覧へ", "text-button", () => {
+      const listTitle = $("reader-list-title");
+      listTitle.focus({ preventScroll: true });
+      listTitle.scrollIntoView({ block: "start" });
     }));
+    if (links.childElementCount) target.append(links);
   }
 }
 
@@ -2130,7 +2279,7 @@ function entryItem(day, selected, choose, compact = false) {
   const content = node("span", "entry-text");
   content.append(time);
   if (!compact) {
-    const teaser = day.note || (day.activities.length ? "時間帯 " + day.activities.length + "件" : (day.mood ? MOODS[day.mood - 1].label : day.outside === "out" ? "外に出た" : "家で過ごした"));
+    const teaser = day.note || (day.activities.length ? "行動 " + day.activities.length + "件" : day.mood ? MOODS[day.mood - 1].label : dayOutsideText(day));
     content.append(node("span", "entry-teaser", teaser));
   }
   const action = button("", "", choose);
@@ -2161,8 +2310,9 @@ function outsideSummary(days) {
   let outside = 0;
   let recorded = 0;
   for (const day of days) {
-    if (day?.outside === "out") outside += 1;
-    if (day?.outside === "out" || day?.outside === "home") recorded += 1;
+    const status = dayOutside(day);
+    if (status === "out") outside += 1;
+    if (status) recorded += 1;
   }
   return recorded ? "外に出た日 " + outside + "日 ／ 外出状況を記録した日 " + recorded + "日" : "外出状況は未記録";
 }
@@ -2185,11 +2335,24 @@ function renderReaderOverview() {
   $("reader-week").replaceChildren(...dates.map((date) => {
     const day = days[date];
     const item = button("", "recent-day", () => selectReaderDate(date));
-    const label = day?.mood ? MOODS[day.mood - 1].label : day ? "気分未記録"
-      : overnightActivities(days, date).length ? "前日から" : "記録なし";
-    item.setAttribute("aria-label", displayDay(date) + "、" + label);
+    const dateLabel = node("time", "", date.slice(5).replace("-", "/"));
+    dateLabel.dateTime = date;
+    const mood = day?.mood;
+    const outside = dayOutside(day) ? dayOutsideText(day) : "";
+    const carried = !day && overnightActivities(days, date).length > 0;
+    const label = mood ? MOODS[mood - 1].label : outside || (day ? "記録あり" : carried ? "前日からの記録" : "記録なし");
+    item.setAttribute("aria-label", [displayDay(date), label, mood && outside].filter(Boolean).join("、"));
     item.setAttribute("aria-pressed", String(selectedReaderDate === date));
-    item.append(node("span", "", date.slice(5).replace("-", "/")), day?.mood ? face(day.mood) : node("span", "recent-unrated", "—"), node("small", "", label));
+    const content = node("span", "recent-day-content");
+    if (mood) {
+      const moodLabel = node("span", "recent-day-mood");
+      moodLabel.append(face(mood), node("span", "", label));
+      content.append(moodLabel);
+      if (outside) content.append(node("span", "recent-day-outside", outside));
+    } else {
+      content.append(node("span", day || carried ? "" : "recent-day-empty", label));
+    }
+    item.append(dateLabel, content);
     return item;
   }));
 }
@@ -2230,8 +2393,9 @@ function monthCounts(days, month) {
     if (!day.date.startsWith(month)) continue;
     total += 1;
     if (day.mood) { counts[day.mood - 1] += 1; moodTotal += day.mood; }
-    if (day.outside === "out") { outsideOut += 1; outsideRated += 1; }
-    if (day.outside === "home") outsideRated += 1;
+    const outside = dayOutside(day);
+    if (outside === "out") outsideOut += 1;
+    if (outside) outsideRated += 1;
   }
   return { counts, total, rated: counts.reduce((sum, count) => sum + count, 0), moodTotal, outsideOut, outsideRated };
 }
@@ -2271,9 +2435,10 @@ function renderTrendRow(days, month) {
     $("trend-list").querySelector('[aria-pressed="true"]')?.focus();
   });
   action.setAttribute("aria-pressed", String(month === monthCursor));
-  const labels = rated ? counts.flatMap((count, index) => count ? [MOODS[index].label + " " + count + "日"] : []) : ["気分は未記録"];
+  const labels = counts.flatMap((count, index) => count ? [MOODS[index].label + " " + count + "日"] : []);
+  const coverage = "気分の記録 " + rated + "日";
   const outside = outsideRated ? "外出 " + outsideOut + "日 / 記録 " + outsideRated + "日" : "外出状況は未記録";
-  action.setAttribute("aria-label", [displayMonth(month), ...labels, outside].join("、"));
+  action.setAttribute("aria-label", [displayMonth(month), coverage, ...labels, outside].join("、"));
   const svg = svgNode("svg", { viewBox: "0 0 100 8", preserveAspectRatio: "none", "aria-hidden": "true" });
   svg.append(svgNode("rect", { x: 0, y: 0, width: 100, height: 8, fill: "#e6e9df" }));
   let offset = 0;
@@ -2284,7 +2449,7 @@ function renderTrendRow(days, month) {
       offset += width;
     }
   }
-  action.append(node("span", "", displayMonth(month)), svg, node("span", "trend-count", outside));
+  action.append(node("span", "", displayMonth(month)), node("span", "trend-count", coverage), svg, node("span", "trend-outside", outside));
   return action;
 }
 
@@ -2351,8 +2516,9 @@ function renderMonth() {
       const date = value.toISOString().slice(0, 10);
       const day = days[date];
       const cell = button("", "week-day", () => selectCalendarDate(date, true));
-      const outside = day?.outside === "out" ? "外出" : day?.outside === "home" ? "在宅" : "—";
-      cell.setAttribute("aria-label", displayDay(date) + "、気分 " + (day?.mood ? MOODS[day.mood - 1].label : "未記録") + "、外出 " + (outside === "—" ? "未記録" : outside));
+      const outsideValue = dayOutside(day);
+      const outside = outsideValue === "out" ? "外出" : outsideValue === "home" ? "在宅" : "—";
+      cell.setAttribute("aria-label", displayDay(date) + "、気分 " + (day?.mood ? MOODS[day.mood - 1].label : "未記録") + "、" + dayOutsideText(day, true));
       cell.append(node("span", "", ["月", "火", "水", "木", "金", "土", "日"][index]));
       cell.append(day?.mood ? face(day.mood) : node("span", "week-unrated", "—"));
       cell.append(node("small", "", outside));
@@ -2411,7 +2577,7 @@ function activityDraftDirty() {
 }
 
 function canSaveActivity(activity) {
-  return Boolean(activity.action && validActivity(activity) && (!activity.start || activity.start !== activity.end));
+  return Boolean(activity.action && validActivity(activity) && !activityTimeIssue(activity));
 }
 
 function previousNightDate(activity) {
@@ -2477,13 +2643,15 @@ function bindTimePicker() {
     const action = actionInput.value.trim();
     const place = placeInput.value.trim();
     const range = timeRange({ start: startInput.value, end: endInput.value, action });
-    const sameTime = Boolean(startInput.value && startInput.value === endInput.value);
+    const timeIssue = activityTimeIssue({ start: startInput.value, end: endInput.value });
     $("preset-hint").textContent = overnight
       ? "帯は開始日の分です。翌日の終了は時刻欄で変更できます。"
       : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
     $("clear-quick-time").hidden = !range;
-    $("quick-time-error").textContent = sameTime
+    $("quick-time-error").textContent = timeIssue
       ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。" : "";
+    startInput.setAttribute("aria-invalid", String(Boolean(timeIssue)));
+    endInput.setAttribute("aria-invalid", String(Boolean(timeIssue)));
     const draft = activityComposerDraft();
     const sleep = action === "睡眠";
     const date = composerActivityDate(draft);
@@ -2862,11 +3030,9 @@ function editorDraft() {
     outside: $("outside-options").querySelector("input:checked")?.value ?? null };
 }
 
-function editorDirty() {
+function editorDirty(draft = editorDraft()) {
   const original = dayWithoutRevision(loadedDay) ?? { date: editDate, mood: null, note: "", activities: [], outside: null };
-  const draft = editorDraft();
-  return JSON.stringify({ ...original, activities: sortedActivities(original.activities) })
-    !== JSON.stringify({ ...draft, activities: sortedActivities(draft.activities) });
+  return !dayEquals(original, draft);
 }
 
 // Quick choices commit only their own fields; unfinished notes and activities remain drafts.
@@ -2906,10 +3072,7 @@ async function flushQuickSave() {
       const days = { ...ownerState.days };
       if (record) days[request.date] = record;
       else delete days[request.date];
-      const next = { ...ownerState, days };
-      const box = await persistOwnerState(ownerDatabase, ownerKey, ownerBox, next);
-      ownerState = next;
-      ownerBox = box;
+      await commitOwnerState({ ...ownerState, days });
       loadedDay = record;
       quickSaveError = "";
       for (const field of Object.keys(request.patch)) {
@@ -2970,7 +3133,9 @@ function renderActivityOverview(activities) {
   }
   $("activity-overview-tracks").replaceChildren(...Array.from(groups, ([name, spans]) => {
     const row = node("div", "activity-overview-row");
-    row.append(node("span", "activity-overview-name", name), activityOverviewTrack(spans));
+    const label = node("span", "activity-overview-name", name);
+    if (name === "仕事" && spans.some(({ from, to }) => from < to)) label.append(node("small", "", "休憩込み"));
+    row.append(label, activityOverviewTrack(spans));
     return row;
   }));
 }
@@ -3035,6 +3200,10 @@ function renderActivitySummary(row) {
   row.querySelector(".start-time-label").textContent = outing ? "出発" : "開始";
   row.querySelector(".end-time-label").textContent = outing ? (overnight ? "帰宅（翌日）" : "帰宅")
     : overnight ? "終了（翌日）" : "終了";
+  const issue = activityTimeIssue(activity);
+  row.querySelector(".activity-time-error").textContent = issue;
+  row.querySelector(".start-time").setAttribute("aria-invalid", String(Boolean(issue)));
+  row.querySelector(".end-time").setAttribute("aria-invalid", String(Boolean(issue)));
   const work = workTimeParts(activity);
   row.querySelector(".activity-duration").textContent = work?.duration ?? ((overnight ? "計" : "") + durationText(to - from + (overnight ? 1440 : 0)));
   const breakSummary = row.querySelector(".activity-break-summary");
@@ -3094,11 +3263,10 @@ function addActivity(activity = {}, focus = false) {
 }
 
 function refreshEditorControls() {
-  const dirty = Boolean(ownerKey && editorDirty());
   const draft = editorDraft();
+  const dirty = Boolean(ownerKey && editorDirty(draft));
   renderActivityOverview(draft.activities);
-  const activitiesChanged = JSON.stringify(sortedActivities(draft.activities))
-    !== JSON.stringify(sortedActivities(loadedDay?.activities ?? []));
+  const activitiesChanged = !sameActivities(draft.activities, loadedDay?.activities ?? []);
   const hasOtherDraft = draft.note !== (loadedDay?.note ?? "") || activitiesChanged;
   $("day-save-bar").hidden = !dirty || Boolean(pendingQuickSave && !hasOtherDraft && !quickSaveError);
   $("save-state").textContent = working === "save" ? "保存中…" : quickSaveError ? quickSaveError : pendingQuickSave ? "選択を保存しています…" : dirty ? "未保存の変更"
@@ -3111,6 +3279,8 @@ function refreshEditorControls() {
   const note = $("note");
   $("note-count").textContent = note.value.length + " / " + note.maxLength + "文字";
   $("clear-outside").hidden = !$("outside-options").querySelector("input:checked");
+  $("outside-conflict").hidden = draft.outside !== "home" || !hasOutingActivity(ownerState?.days[editDate]);
+  $("correct-outside").disabled = working === "save" || activitySavePending;
   $("clear-mood").hidden = !$("mood-options").querySelector("input:checked");
   $("delete-entry").hidden = !ownerState?.days[editDate];
   $("day-tools").hidden = !ownerState?.days[editDate];
@@ -3122,7 +3292,7 @@ function refreshEditorControls() {
   refreshComposerSummary();
 }
 
-function fillEditor(date) {
+function fillEditor(date, keepComposer = false) {
   cancelQuickSave();
   quickSaveError = "";
   editDate = date;
@@ -3138,8 +3308,10 @@ function fillEditor(date) {
   $("note").value = loadedDay?.note ?? "";
   $("memo-details").open = Boolean(loadedDay?.note);
   $("memo-label").textContent = loadedDay?.note ? "共有メモ" : "共有メモを追加";
-  $("time-composer").open = false;
-  refreshTimePresets();
+  if (!keepComposer) {
+    $("time-composer").open = false;
+    refreshTimePresets();
+  }
   $("day-tools").open = false;
   for (const radio of $("mood-options").querySelectorAll("input")) radio.checked = Number(radio.value) === loadedDay?.mood;
   for (const radio of $("outside-options").querySelectorAll("input")) radio.checked = radio.value === loadedDay?.outside;
@@ -3223,14 +3395,19 @@ function resetShareSecrets() {
   status("copy-message");
 }
 
-async function persistState(next, replaceDraft = false) {
-  if (next === ownerState) return;
-  const box = await persistOwnerState(ownerDatabase, ownerKey, ownerBox, next);
-  const preserve = !replaceDraft && (editorDirty() || activityDraftDirty());
-  const previousDays = ownerState.days;
-  ownerState = next;
+async function commitOwnerState(next) {
+  const state = trackSyncBase(ownerState, next);
+  const box = await persistOwnerState(ownerDatabase, ownerKey, ownerBox, state);
+  ownerState = state;
   ownerBox = box;
-  if (!preserve && (replaceDraft || !dayEquals(loadedDay, next.days[editDate]))) fillEditor(editDate);
+}
+
+async function persistState(next, { replaceDraft = false, keepComposer = false } = {}) {
+  if (next === ownerState) return;
+  const previousDays = ownerState.days;
+  await commitOwnerState(next);
+  const preserve = !replaceDraft && (editorDirty() || activityDraftDirty());
+  if (!preserve && (replaceDraft || !dayEquals(loadedDay, next.days[editDate]))) fillEditor(editDate, keepComposer);
   else if (!preserve) loadedDay = next.days[editDate];
   else if (!dayEquals(loadedDay, next.days[editDate])) {
     status("save-message", "この日の記録が別の端末で更新されました。入力中の内容は残しています。", true);
@@ -3284,6 +3461,21 @@ function sameActivitySlot(left, right) {
 
 function sameActivity(left, right) {
   return sameActivitySlot(left, right) && left.breakMinutes === right.breakMinutes;
+}
+
+function activityChanges(before, after) {
+  const added = [...after];
+  let removed = 0;
+  for (const activity of before) {
+    const index = added.findIndex((item) => sameActivity(item, activity));
+    if (index < 0) removed += 1;
+    else added.splice(index, 1);
+  }
+  return { added, removed };
+}
+
+function sameActivities(left, right) {
+  return left.length === right.length && !activityChanges(left, right).removed;
 }
 
 function hasDuplicateActivity(activities, activity) {
@@ -3365,7 +3557,7 @@ async function moveSleepToPreviousDay(row) {
       const days = { ...ownerState.days, [previous]: destination };
       if (validDay(remaining)) days[source.date] = remaining;
       else delete days[source.date];
-      await persistState({ ...ownerState, days }, true);
+      await persistState({ ...ownerState, days }, { replaceDraft: true });
       status("activity-saved-notice", "睡眠を" + displayDay(previous) + "の夜に移しました。");
       $("add-activity").focus();
     });
@@ -3384,8 +3576,12 @@ async function saveNewActivity(activity, date = editDate) {
   if (date !== editDate) return date === previousNightDate(activity) && await savePreviousNight(activity, date);
   const current = ownerState.days[editDate];
   if (!dayEquals(loadedDay, current)) {
-    status("activity-save-message", "別の端末でこの日の記録が更新されたため、保存を止めました。入力は残っています。", true);
-    return false;
+    if (editorDirty()) {
+      status("activity-save-message", "別の端末でこの日が更新されました。先に「変更を保存」で編集中の内容を保存できます。", true);
+      return false;
+    }
+    fillEditor(editDate, true);
+    status("save-message");
   }
   const day = dayWithoutRevision(current) ?? { date: editDate, mood: null, outside: null, note: "", activities: [] };
   if (activity.action === "仕事" && activity.start && activity.end
@@ -3422,11 +3618,8 @@ async function saveNewActivity(activity, date = editDate) {
   const record = { ...day, outside: markOutside ? "out" : day.outside, activities: [...day.activities, activity], rev: crypto.randomUUID() };
   try {
     const done = await runOwnerOperation("save", async () => {
-      const next = { ...ownerState, days: { ...ownerState.days, [record.date]: record } };
-      const box = await persistOwnerState(ownerDatabase, ownerKey, ownerBox, next);
+      await commitOwnerState({ ...ownerState, days: { ...ownerState.days, [record.date]: record } });
       debugEvent("activity-storage-written");
-      ownerState = next;
-      ownerBox = box;
       loadedDay = record;
       addActivity(activity);
       debugEvent("activity-list-appended");
@@ -3451,22 +3644,27 @@ async function saveEntry(event, syncAfter = true, includeActivity = false) {
   event.preventDefault();
   if (!ownerKey || working || activitySavePending) return false;
   const hasActivityDraft = activityDraftDirty();
-  if (hasActivityDraft && !includeActivity) {
-    $("time-composer").open = true;
-    refreshComposerSummary();
-    status("activity-save-message", "入力中の行動を先に保存するか、キャンセルしてください。", true);
-    const saveActivity = $("add-selected-time");
-    (saveActivity.disabled ? $("add-activity") : saveActivity).focus();
+  const saveActivityDraft = includeActivity && hasActivityDraft;
+  if (!saveActivityDraft && !editorDirty()) return true;
+  let draft = editorDraft();
+  const invalidTime = activityChanges(loadedDay?.activities ?? [], draft.activities).added.find(activityTimeIssue);
+  if (invalidTime) {
+    status("save-message", activityTimeIssue(invalidTime), true);
+    if (!includeActivity) {
+      const row = [...$("activity-list").children].find((entry) => sameActivity(activityFromRow(entry), invalidTime));
+      if (row) {
+        row.open = true;
+        row.querySelector(".end-time").focus();
+      }
+    }
     return false;
   }
-  if (!hasActivityDraft && !editorDirty()) return true;
-  const draft = editorDraft();
   let nightDate;
   let nightRecord;
-  if (hasActivityDraft) {
+  if (saveActivityDraft) {
     const activity = activityComposerDraft();
     if (!canSaveComposer(activity)) {
-      status("save-message", workBreakIssue(activity) || "入力中の行動の名前と時刻を確認してください。", true);
+      status("save-message", activityTimeIssue(activity) || workBreakIssue(activity) || "入力中の行動の名前と時刻を確認してください。", true);
       return false;
     }
     const date = composerActivityDate(activity);
@@ -3494,24 +3692,33 @@ async function saveEntry(event, syncAfter = true, includeActivity = false) {
     }
   }
   const saveCurrent = !nightDate || editorDirty();
-  const empty = !draft.mood && !draft.outside && !draft.note && !draft.activities.length;
-  if (saveCurrent && !validDay(draft) && !(empty && loadedDay)) {
+  const hasContents = ({ mood, outside, note, activities }) => Boolean(mood || outside || note || activities.length);
+  if (saveCurrent && !validDay(draft) && !(!hasContents(draft) && loadedDay)) {
     const issue = draft.activities.map(workBreakIssue).find(Boolean);
     status("save-message", issue || "記録の内容を確認してください。", true);
     return;
   }
   const current = ownerState.days[draft.date];
-  if (saveCurrent && !dayEquals(loadedDay, current)
-    && !window.confirm("別の端末で更新された記録を、入力中の内容に置き換えますか？")) return;
+  if (saveCurrent && !dayEquals(loadedDay, current)) {
+    if (current) {
+      const merged = mergeDayFields(draft, current, loadedDay);
+      if (merged.conflicts.length) {
+        const labels = merged.conflicts.map((field) => SYNC_DAY_FIELDS[field]).join("・");
+        if (!window.confirm("別の端末でも「" + labels + "」が変更されています。この端末で入力した内容を残しますか？")) return false;
+        const choices = Object.fromEntries(merged.conflicts.map((field) => [field, "local"]));
+        draft = mergeDayFields(draft, current, loadedDay, choices).day;
+      } else draft = merged.day;
+    } else if (hasContents(draft) && !window.confirm("別の端末でこの日が削除されました。入力した内容をこの日に保存しますか？")) return false;
+  }
   try {
     const done = await runOwnerOperation("save", async () => {
       const days = { ...ownerState.days };
       if (nightDate) days[nightDate] = nightRecord;
       if (saveCurrent) {
-        if (empty) delete days[draft.date];
+        if (!hasContents(draft)) delete days[draft.date];
         else days[draft.date] = { ...draft, rev: crypto.randomUUID() };
       }
-      await persistState({ ...ownerState, days }, true);
+      await persistState({ ...ownerState, days }, { replaceDraft: true, keepComposer: hasActivityDraft && !includeActivity });
       status("save-message", ownerState.cloud ? "端末に保存しました。GitHubと同期します。" : "この日の記録を保存しました。");
     });
     if (done && syncAfter && ownerState.cloud) void synchronize({ fromEditor: true });
@@ -3529,7 +3736,7 @@ async function deleteEntry() {
     const done = await runOwnerOperation("save", async () => {
       const days = { ...ownerState.days };
       delete days[date];
-      await persistState({ ...ownerState, days }, true);
+      await persistState({ ...ownerState, days }, { replaceDraft: true });
       status("save-message", "この日の記録を削除しました。");
     });
     if (done && ownerState.cloud) void synchronize({ fromEditor: true });
@@ -3538,11 +3745,12 @@ async function deleteEntry() {
   }
 }
 
-function conflictDescription(day) {
+function conflictDescription(day, field) {
   if (!day) return "この日の記録を削除";
   const mood = day.mood ? "気分 " + MOODS[day.mood - 1].label : "";
   const times = sortedActivities(day.activities).map((activity) => [timeRange(activity), activity.place, activity.action, workTimeText(activity)].filter(Boolean).join("　"));
-  const outside = day.outside === "out" ? "外に出た" : day.outside === "home" ? "家で過ごした" : "";
+  const outside = day.outside ? outsideLabel(day.outside) : "";
+  if (field !== "day") return { mood, outside, activities: times.join("\n"), note: day.note }[field] || "未記録";
   return [mood, outside, day.note, ...times].filter(Boolean).join("\n");
 }
 
@@ -3550,17 +3758,22 @@ function showConflict(conflict) {
   currentConflict = conflict;
   const rows = conflict.conflicts.map((date) => {
     const group = node("fieldset");
-    const options = node("div", "conflict-row");
-    group.append(node("legend", "", displayDay(date, true)), options);
-    for (const [choice, title] of [["local", "この端末"], ["remote", "GitHub"]]) {
-      const label = node("label", "conflict-option");
-      const radio = node("input");
-      radio.type = "radio";
-      radio.name = date;
-      radio.value = choice;
-      radio.required = true;
-      label.append(radio, node("span", "", title), node("p", "", conflictDescription(conflict[choice][date])));
-      options.append(label);
+    group.append(node("legend", "", displayDay(date, true)));
+    for (const field of conflict.fields[date]) {
+      const section = node("fieldset", "conflict-field");
+      const options = node("div", "conflict-row");
+      section.append(node("legend", "", SYNC_DAY_FIELDS[field] ?? "記録全体"), options);
+      for (const [choice, title] of [["local", "この端末"], ["remote", "GitHub"]]) {
+        const label = node("label", "conflict-option");
+        const radio = node("input");
+        radio.type = "radio";
+        radio.name = date + "-" + field;
+        radio.value = choice;
+        radio.required = true;
+        label.append(radio, node("span", "", title), node("p", "", conflictDescription(conflict[choice][date], field)));
+        options.append(label);
+      }
+      group.append(section);
     }
     return group;
   });
@@ -4011,6 +4224,11 @@ async function initOwner() {
     for (const radio of $("outside-options").querySelectorAll("input")) {
       radio.addEventListener("change", () => { if (radio.checked) queueQuickSave("outside", radio.value); });
     }
+    $("correct-outside").addEventListener("click", () => {
+      const choice = $("outside-options").querySelector('input[value="out"]');
+      choice.focus();
+      choice.click();
+    });
     $("owner-gate-form").addEventListener("submit", unlockOwner);
     $("private-memo").addEventListener("toggle", () => {
       if ($("private-memo").open && !privateMemoDirty()) void loadPrivateMemo();
@@ -4131,7 +4349,8 @@ async function initOwner() {
       const conflict = currentConflict;
       if (!conflict) return;
       const resolution = Object.fromEntries(conflict.conflicts.map((date) => [date, {
-        choice: choices.get(date), local: conflict.local[date]?.rev, remote: conflict.remote[date]?.rev
+        choices: Object.fromEntries(conflict.fields[date].map((field) => [field, choices.get(date + "-" + field)])),
+        local: conflict.local[date]?.rev, remote: conflict.remote[date]?.rev
       }]));
       $("conflict-dialog").close();
       void synchronize({ resolution });
