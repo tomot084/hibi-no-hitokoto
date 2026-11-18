@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-u6FxthHpFSXqHkjkMeVH4fUDgfHgpGn9CSBayjAea1Y='; style-src 'sha256-MZe85S1RCZldHaY0E0HiLPLUVrj7yGf92lQ6xcWcEC0='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pIfud0Qpu8QRUvjCtNqnI/JapijkBzCwUd8qT8aTYPI='; style-src 'sha256-mdqvwwAyGtej0zIs1XRy+DVnSo1BRa4zmSmKCJSIKl4='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -533,6 +533,7 @@ body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color:
 }
 .activity-summary::-webkit-details-marker { display: none; }
 .activity-summary::after { content: "編集"; grid-column: 2; grid-row: 2; font-size: .69rem; color: var(--muted); text-align: right; }
+.activity:not([open]) .activity-summary[data-awaiting-return]::after { content: "帰宅を記録"; color: var(--green); font-weight: 650; }
 .activity[open] .activity-summary::after { content: "閉じる"; }
 .activity-title { grid-column: 1; grid-row: 1; color: var(--green); font-size: .83rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .activity-description { grid-column: 1; grid-row: 2; font-size: .91rem; font-weight: 650; overflow-wrap: anywhere; }
@@ -928,7 +929,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                     <button type="button" class="button secondary" data-action="食事" aria-pressed="false">食事</button>
                     <button type="button" class="button secondary" data-action="仕事" data-reuse-time aria-pressed="false">仕事</button>
                     <button type="button" class="button secondary" data-action="睡眠" data-reuse-time aria-pressed="false">睡眠</button>
-                    <button type="button" class="button secondary" data-action="外出" data-reuse-time aria-pressed="false">外出</button>
+                    <button type="button" class="button secondary" data-action="外出" aria-pressed="false">外出</button>
                     <button type="button" class="button secondary" data-action="欠勤" aria-pressed="false">欠勤</button>
                   </div>
                   <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
@@ -1248,7 +1249,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
       </summary>
       <div class="activity-editor">
         <div class="time-row">
-          <label class="field"><span>開始</span><input type="time" class="start-time" step="60"></label>
+          <label class="field"><span class="start-time-label">開始</span><input type="time" class="start-time" step="60"></label>
           <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
           <label class="field"><span class="end-time-label">終了</span><input type="time" class="end-time" step="60"></label>
         </div>
@@ -1992,10 +1993,10 @@ function overnightActivities(days, date) {
     .sort((a, b) => a.end.localeCompare(b.end));
 }
 
-function timeRange({ start, end }, fromPrevious = false) {
+function timeRange({ start, end, action }, fromPrevious = false) {
   if (!start && !end) return "";
   if (!start) return "〜 " + end;
-  if (!end) return start + " 〜";
+  if (!end) return start + (action === "外出" ? " 出発" : " 〜");
   if (fromPrevious) return "前日 " + start + " → " + end;
   return start + " → " + (crossesMidnight({ start, end }) ? "翌日 " : "") + end;
 }
@@ -2457,7 +2458,7 @@ function bindTimePicker() {
     }
     const action = actionInput.value.trim();
     const place = placeInput.value.trim();
-    const range = timeRange({ start: startInput.value, end: endInput.value });
+    const range = timeRange({ start: startInput.value, end: endInput.value, action });
     const sameTime = Boolean(startInput.value && startInput.value === endInput.value);
     $("preset-hint").textContent = overnight
       ? "帯は開始日の分です。翌日の終了は時刻欄で変更できます。"
@@ -2470,8 +2471,10 @@ function bindTimePicker() {
     const date = composerActivityDate(draft);
     const endDate = overnight ? adjacentDate(date, 1) : date;
     const showSleepDates = sleep && valid && Boolean(date && endDate);
-    $("quick-start-label").textContent = sleep ? "寝た時刻" : "開始";
-    $("quick-end-label").textContent = sleep ? "起きた時刻" : overnight ? "終了（翌日）" : "終了";
+    const outing = action === "外出";
+    $("quick-start-label").textContent = sleep ? "寝た時刻" : outing ? "出発" : "開始";
+    $("quick-end-label").textContent = sleep ? "起きた時刻" : outing ? (overnight ? "帰宅（翌日）" : "帰宅（あとで入力可）")
+      : overnight ? "終了（翌日）" : "終了";
     for (const [id, day] of [["quick-start-date", date], ["quick-end-date", endDate]]) {
       $(id).hidden = !showSleepDates;
       $(id).textContent = showSleepDates ? displayDay(day) : "";
@@ -2487,7 +2490,7 @@ function bindTimePicker() {
     const absent = action === "欠勤";
     details.hidden = absent;
     $("quick-time-error").hidden = absent;
-    $("add-selected-time").textContent = absent ? "欠勤を保存" : sleep ? "睡眠を保存" : "この行動を保存";
+    $("add-selected-time").textContent = absent ? "欠勤を保存" : sleep ? "睡眠を保存" : outing ? "外出を保存" : "この行動を保存";
     renderWorkBreakInput($("quick-work-break"), draft);
     $("add-selected-time").disabled = !canSaveComposer(draft);
     for (const preset of presets) preset.setAttribute("aria-pressed", String(preset === selected));
@@ -2531,8 +2534,8 @@ function bindTimePicker() {
         startInput.value = selected?.dataset.start ?? "";
         endInput.value = selected?.dataset.end ?? "";
       }
-      if (actionInput.value === "睡眠") details.open = true;
-      else $("quick-previous-night").checked = false;
+      if (actionInput.value === "睡眠" || actionInput.value === "外出") details.open = true;
+      if (actionInput.value !== "睡眠") $("quick-previous-night").checked = false;
       status("activity-save-message");
       paint();
     });
@@ -2967,7 +2970,11 @@ function renderActivitySummary(row) {
   const to = timed ? clockMinute(end) : 0;
   strip.hidden = overnight && action === "睡眠";
   if (!strip.hidden) paintActivityStrip(strip, action, from, overnight ? 1440 : to);
-  row.querySelector(".end-time-label").textContent = overnight ? "終了（翌日）" : "終了";
+  const outing = action === "外出";
+  row.querySelector(".activity-summary").toggleAttribute("data-awaiting-return", outing && Boolean(start) && !end);
+  row.querySelector(".start-time-label").textContent = outing ? "出発" : "開始";
+  row.querySelector(".end-time-label").textContent = outing ? (overnight ? "帰宅（翌日）" : "帰宅")
+    : overnight ? "終了（翌日）" : "終了";
   const work = workTimeParts(activity);
   row.querySelector(".activity-duration").textContent = work?.duration ?? ((overnight ? "計" : "") + durationText(to - from + (overnight ? 1440 : 0)));
   const breakSummary = row.querySelector(".activity-break-summary");
