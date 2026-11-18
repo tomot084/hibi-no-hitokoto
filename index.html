@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-TegeV8Rb72nZViXTyEjL4Pfuo21rsD2y9hRHuzu6NqA='; style-src 'sha256-OH4gJPjqPw4GKDhYVrFrzYl1QP7xIcArOdq0BuST38k='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-JHX9vmmFq2ffXL8tcAjT1eIenEj3ygSTYbpwkogae/g='; style-src 'sha256-ZcqmLETw/TkGpj5gN65OqwkGZvD5meJMjGeS7aKxqsg='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -766,9 +766,16 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 .activity-summary-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1px 8px; min-width: 0; }
 .activity-summary .activity-title { font-weight: 500; color: var(--muted); }
 .activity-summary .activity-duration:empty { display: none; }
-.activity-overview { margin: 12px 2px 8px; }
+.activity-overview { --overview-label: 4.6em; margin: 12px 2px 8px; font-size: .75rem; }
+.activity-overview-row { display: grid; grid-template-columns: var(--overview-label) minmax(0, 1fr); align-items: center; gap: 6px; min-height: 22px; }
+.activity-overview-name { overflow-wrap: anywhere; color: var(--ink); line-height: 1.2; }
 .activity-overview svg { display: block; width: 100%; }
-.activity-overview-hours { display: flex; justify-content: space-between; color: var(--muted); font-size: .7rem; }
+.activity-overview-hours { grid-column: 2; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); color: var(--muted); font-size: .7rem; white-space: nowrap; }
+.activity-overview-hours span + span { grid-row: 1; grid-column: var(--hour-column) / span 2; justify-self: center; }
+.activity-overview-hours span:nth-child(2) { --hour-column: 2; }
+.activity-overview-hours span:nth-child(3) { --hour-column: 4; }
+.activity-overview-hours span:nth-child(4) { --hour-column: 6; }
+.activity-overview-hours span:last-child { grid-column: 8; justify-self: end; }
 #quick-details-label {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px;
   border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--paper);
@@ -970,8 +977,10 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                 <p id="activity-saved-notice" role="status"></p>
                 <div class="activity-undo"><span id="cancelled-activity-notice" role="status"></span><button type="button" class="text-button" id="undo-cancelled-activity" hidden>入力を元に戻す</button></div>
                 <div class="activity-overview" id="activity-overview" hidden aria-hidden="true">
-                  <div class="activity-overview-hours"><span>0時</span><span>6時</span><span>12時</span><span>18時</span><span>24時</span></div>
-                  <svg id="activity-overview-chart" preserveAspectRatio="none"></svg>
+                  <div class="activity-overview-row">
+                    <div class="activity-overview-hours"><span>0時</span><span>6時</span><span>12時</span><span>18時</span><span>24時</span></div>
+                  </div>
+                  <div id="activity-overview-tracks"></div>
                 </div>
                 <div id="overnight-activities" hidden></div>
                 <p class="muted" id="time-empty">まだ行動の記録はありません。</p>
@@ -2952,8 +2961,22 @@ function activityOverviewSegments(activities, carried) {
 function renderActivityOverview(activities) {
   const segments = activityOverviewSegments(activities, overnightActivities(visibleDays(), editDate));
   const overview = $("activity-overview");
-  const chart = $("activity-overview-chart");
   overview.hidden = !segments.length;
+  const groups = new Map();
+  for (const segment of segments) {
+    const name = segment.action || "行動";
+    if (!groups.has(name)) groups.set(name, []);
+    groups.get(name).push(segment);
+  }
+  $("activity-overview-tracks").replaceChildren(...Array.from(groups, ([name, spans]) => {
+    const row = node("div", "activity-overview-row");
+    row.append(node("span", "activity-overview-name", name), activityOverviewTrack(spans));
+    return row;
+  }));
+}
+
+function activityOverviewTrack(segments) {
+  const chart = svgNode("svg", { preserveAspectRatio: "none" });
   const laneEnds = [];
   const marks = segments.map(({ action, from, to }) => {
     const point = from === to;
@@ -2976,6 +2999,7 @@ function renderActivityOverview(activities) {
     x1: x, x2: x, y1: 0, y2: height, stroke: "#cdd0d8", "vector-effect": "non-scaling-stroke"
   }));
   chart.replaceChildren(...grid, ...marks);
+  return chart;
 }
 
 function renderOvernightEditor() {
