@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pIfud0Qpu8QRUvjCtNqnI/JapijkBzCwUd8qT8aTYPI='; style-src 'sha256-mdqvwwAyGtej0zIs1XRy+DVnSo1BRa4zmSmKCJSIKl4='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-TegeV8Rb72nZViXTyEjL4Pfuo21rsD2y9hRHuzu6NqA='; style-src 'sha256-OH4gJPjqPw4GKDhYVrFrzYl1QP7xIcArOdq0BuST38k='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -528,11 +528,11 @@ body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color:
 .activity-list { gap: 0; }
 .activity { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0; }
 .activity-summary {
-  display: grid; grid-template-columns: 1fr auto; column-gap: 12px; row-gap: 3px;
-  list-style: none; padding: 12px 2px; min-height: 68px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 10px;
+  list-style: none; padding: 8px 2px; min-height: 44px;
 }
 .activity-summary::-webkit-details-marker { display: none; }
-.activity-summary::after { content: "編集"; grid-column: 2; grid-row: 2; font-size: .69rem; color: var(--muted); text-align: right; }
+.activity-summary::after { content: "編集"; grid-column: 2; grid-row: 1; font-size: .69rem; color: var(--muted); text-align: right; white-space: nowrap; }
 .activity:not([open]) .activity-summary[data-awaiting-return]::after { content: "帰宅を記録"; color: var(--green); font-weight: 650; }
 .activity[open] .activity-summary::after { content: "閉じる"; }
 .activity-title { grid-column: 1; grid-row: 1; color: var(--green); font-size: .83rem; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -544,9 +544,7 @@ body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color:
 .work-break-control .field { max-inline-size: 14em; margin-bottom: 4px; }
 .work-break-status.error { color: var(--danger); }
 .work-break-status:empty { display: none; }
-.activity-strip { grid-column: 1 / -1; width: 100%; height: 4px; margin-top: 4px; }
 .overnight-row { padding: 12px 2px; border-bottom: 1px solid var(--line); }
-.overnight-row .activity-strip { display: block; margin-top: 8px; }
 .overnight-meta { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
 .overnight-row .timeline-action { font-weight: 650; }
 .activity-editor { padding: 6px 2px 10px; }
@@ -765,8 +763,12 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
 }
 
 .auto-tag { font-size: .73rem; font-weight: 600; color: var(--muted); margin-inline-start: 5px; }
-.activity-summary .activity-description { grid-row: 1; }
-.activity-summary .activity-title { grid-row: 2; font-weight: 500; color: var(--muted); }
+.activity-summary-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1px 8px; min-width: 0; }
+.activity-summary .activity-title { font-weight: 500; color: var(--muted); }
+.activity-summary .activity-duration:empty { display: none; }
+.activity-overview { margin: 12px 2px 8px; }
+.activity-overview svg { display: block; width: 100%; }
+.activity-overview-hours { display: flex; justify-content: space-between; color: var(--muted); font-size: .7rem; }
 #quick-details-label {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px;
   border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--paper);
@@ -967,15 +969,19 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                 </details>
                 <p id="activity-saved-notice" role="status"></p>
                 <div class="activity-undo"><span id="cancelled-activity-notice" role="status"></span><button type="button" class="text-button" id="undo-cancelled-activity" hidden>入力を元に戻す</button></div>
+                <div class="activity-overview" id="activity-overview" hidden aria-hidden="true">
+                  <div class="activity-overview-hours"><span>0時</span><span>6時</span><span>12時</span><span>18時</span><span>24時</span></div>
+                  <svg id="activity-overview-chart" preserveAspectRatio="none"></svg>
+                </div>
                 <div id="overnight-activities" hidden></div>
                 <p class="muted" id="time-empty">まだ行動の記録はありません。</p>
                 <div class="activity-list" id="activity-list"></div>
                 <div class="activity-undo"><span id="activity-notice" role="status"></span><button type="button" class="text-button" id="undo-activity" hidden>元に戻す</button></div>
               </section>
               <details class="memo-details" id="memo-details">
-                <summary id="memo-label">メモを追加</summary>
+                <summary id="memo-label">共有メモを追加</summary>
               <label class="field note-field">
-                <span>メモ</span>
+                <span>共有メモ</span>
                 <textarea id="note" maxlength="600" rows="3" aria-describedby="note-count" placeholder="今日は外に出られた。"></textarea>
               </label>
 
@@ -1243,10 +1249,12 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
   <template id="activity-template">
     <details class="activity">
       <summary class="activity-summary">
-        <span class="activity-title"></span><span class="activity-description"></span>
-        <span class="activity-duration"></span>
+        <span class="activity-summary-main">
+          <span class="activity-description"></span>
+          <span class="activity-title"></span>
+          <span class="activity-duration"></span>
+        </span>
         <span class="activity-break-summary" hidden></span>
-        <svg class="activity-strip" viewBox="0 0 1440 6" preserveAspectRatio="none" aria-hidden="true"></svg>
       </summary>
       <div class="activity-editor">
         <div class="time-row">
@@ -2930,9 +2938,44 @@ function populateMoodOptions() {
   $("mood-options").replaceChildren(...options);
 }
 
-function paintActivityStrip(strip, action, from, to) {
-  strip.replaceChildren(svgNode("rect", { width: 1440, height: 6, fill: "#e6e5e0" }));
-  if (to > from) strip.append(svgNode("rect", { x: from, width: to - from, height: 6, fill: activityColor(action) }));
+function activityOverviewSegments(activities, carried) {
+  const segments = carried.map(({ action, end }) => ({ action, from: 0, to: clockMinute(end) }));
+  for (const { action, start, end } of activities) {
+    if (!start && !end) continue;
+    const from = clockMinute(start || end);
+    const to = start && end ? (end < start ? 1440 : clockMinute(end)) : from;
+    segments.push({ action, from, to });
+  }
+  return segments.sort((a, b) => a.from - b.from || b.to - a.to);
+}
+
+function renderActivityOverview(activities) {
+  const segments = activityOverviewSegments(activities, overnightActivities(visibleDays(), editDate));
+  const overview = $("activity-overview");
+  const chart = $("activity-overview-chart");
+  overview.hidden = !segments.length;
+  const laneEnds = [];
+  const marks = segments.map(({ action, from, to }) => {
+    const point = from === to;
+    const available = laneEnds.findIndex((end) => end <= from);
+    const lane = available < 0 ? laneEnds.length : available;
+    laneEnds[lane] = point ? from + 1 : to;
+    const y = lane * 10 + 2;
+    const mark = point ? svgNode("line", { x1: from, x2: from, y1: y, y2: y + 6, stroke: activityColor(action),
+        "stroke-width": 3, "vector-effect": "non-scaling-stroke" })
+      : svgNode("rect", { x: from, width: to - from, y, height: 6, fill: activityColor(action) });
+    const title = svgNode("title", {});
+    title.textContent = action || "行動";
+    mark.append(title);
+    return mark;
+  });
+  const height = Math.max(10, laneEnds.length * 10);
+  chart.setAttribute("height", height);
+  chart.setAttribute("viewBox", "0 0 1440 " + height);
+  const grid = [0, 360, 720, 1080, 1440].map((x) => svgNode("line", {
+    x1: x, x2: x, y1: 0, y2: height, stroke: "#cdd0d8", "vector-effect": "non-scaling-stroke"
+  }));
+  chart.replaceChildren(...grid, ...marks);
 }
 
 function renderOvernightEditor() {
@@ -2944,11 +2987,6 @@ function renderOvernightEditor() {
     for (const activity of activities) {
       const row = node("div", "overnight-row");
       appendOvernightDetails(row, activity);
-      if (activity.action !== "睡眠") {
-        const strip = svgNode("svg", { class: "activity-strip", viewBox: "0 0 1440 6", preserveAspectRatio: "none", "aria-hidden": "true" });
-        paintActivityStrip(strip, activity.action, 0, clockMinute(activity.end));
-        row.append(strip);
-      }
       container.append(row);
     }
     const previous = adjacentDate(editDate, -1);
@@ -2964,13 +3002,10 @@ function renderActivitySummary(row) {
   const { start, end, action, place } = activity;
   row.querySelector(".activity-title").textContent = timeRange(activity) || "時刻なし";
   row.querySelector(".activity-description").textContent = [action || "内容を入力", place].filter(Boolean).join(" · ");
-  const strip = row.querySelector(".activity-strip");
   const overnight = crossesMidnight({ start, end });
   const timed = start && end && start !== end;
   const from = timed ? clockMinute(start) : 0;
   const to = timed ? clockMinute(end) : 0;
-  strip.hidden = overnight && action === "睡眠";
-  if (!strip.hidden) paintActivityStrip(strip, action, from, overnight ? 1440 : to);
   const outing = action === "外出";
   row.querySelector(".activity-summary").toggleAttribute("data-awaiting-return", outing && Boolean(start) && !end);
   row.querySelector(".start-time-label").textContent = outing ? "出発" : "開始";
@@ -3037,6 +3072,7 @@ function addActivity(activity = {}, focus = false) {
 function refreshEditorControls() {
   const dirty = Boolean(ownerKey && editorDirty());
   const draft = editorDraft();
+  renderActivityOverview(draft.activities);
   const activitiesChanged = JSON.stringify(sortedActivities(draft.activities))
     !== JSON.stringify(sortedActivities(loadedDay?.activities ?? []));
   const hasOtherDraft = draft.note !== (loadedDay?.note ?? "") || activitiesChanged;
@@ -3047,7 +3083,7 @@ function refreshEditorControls() {
   const onlyMemo = draft.note !== (loadedDay?.note ?? "")
     && !activitiesChanged
     && draft.mood === (loadedDay?.mood ?? null) && draft.outside === (loadedDay?.outside ?? null);
-  $("save-label").textContent = working === "save" ? "保存中…" : onlyMemo ? "メモを保存" : "変更を保存";
+  $("save-label").textContent = working === "save" ? "保存中…" : onlyMemo ? "共有メモを保存" : "変更を保存";
   const note = $("note");
   $("note-count").textContent = note.value.length + " / " + note.maxLength + "文字";
   $("clear-outside").hidden = !$("outside-options").querySelector("input:checked");
@@ -3077,7 +3113,7 @@ function fillEditor(date) {
   $("entry-date").value = date;
   $("note").value = loadedDay?.note ?? "";
   $("memo-details").open = Boolean(loadedDay?.note);
-  $("memo-label").textContent = loadedDay?.note ? "メモ" : "メモを追加";
+  $("memo-label").textContent = loadedDay?.note ? "共有メモ" : "共有メモを追加";
   $("time-composer").open = false;
   refreshTimePresets();
   $("day-tools").open = false;
