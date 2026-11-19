@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-JeH4BmzNPMVlJjlPzox6kNcZQJjAcRIu3bm1PZE2byE='; style-src 'sha256-0LwKkf5S0vadDDx7Tj7fc/AyOF3Yu79cRs2ITEsdKHg='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-1BJOPzCAvune3XeuPxH+KBfbIWp7+pHDqhD0toranAA='; style-src 'sha256-5CcuztS0YN2eQ0799Lj5iT8LAcLhUloehKyn8xkntyk='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -247,11 +247,10 @@ legend { padding: 0; }
 .outside-row { display: grid; grid-template-columns: auto minmax(0, 320px); align-items: center; gap: 10px; }
 #outside-label { color: var(--muted); font-size: .8rem; font-weight: 680; }
 .outside-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.outside-options label { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: transparent; cursor: pointer; font-size: .8rem; }
-.outside-options input { flex-shrink: 0; margin: 0; }
-.outside-options label:has(input:checked) { border-color: var(--green); background: var(--green-soft); }
-.outside-feedback { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
-.outside-feedback .text-button { margin-inline-start: auto; }
+.outside-options button { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: transparent; cursor: pointer; font-size: .8rem; }
+.outside-options button::before { content: ""; flex-shrink: 0; width: 15px; height: 15px; border: 2px solid var(--muted); border-radius: 50%; }
+.outside-options button[aria-pressed="true"] { border-color: var(--green); background: var(--green-soft); }
+.outside-options button[aria-pressed="true"]::before { border: 5px solid var(--green); background: var(--paper); }
 .note-field { margin-top: 17px; }
 .note-field > span { font-size: 1rem; }
 .note-count { margin-top: 4px; color: var(--muted); font-size: .73rem; text-align: right; font-variant-numeric: tabular-nums; }
@@ -778,7 +777,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
   .reader-overview .recent-days { gap: 4px; }
   .reader-overview .recent-day { min-width: 0; }
   .entry-list button, .recent-day { scroll-margin-block: 12px; }
-  .mood-choice:has(input:focus-visible), .outside-options label:has(input:focus-visible) {
+  .mood-choice:has(input:focus-visible), .outside-options button:focus-visible {
     outline: 3px solid var(--green);
     outline-offset: 3px;
   }
@@ -949,14 +948,11 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                 <div class="outside-row">
                   <span id="outside-label">外出</span>
                   <div class="outside-options" id="outside-options">
-                    <label><input type="radio" name="outside" value="out"><span>外に出た</span></label>
-                    <label><input type="radio" name="outside" value="home"><span>家で過ごした</span></label>
+                    <button type="button" value="out" aria-pressed="false">外に出た</button>
+                    <button type="button" value="home" aria-pressed="false">家で過ごした</button>
                   </div>
                 </div>
-                <div class="outside-feedback">
-                  <p class="muted" id="outside-save-feedback" role="status"></p>
-                  <button type="button" class="text-button" id="clear-outside" aria-label="外出を未記録に戻す" hidden>未記録に戻す</button>
-                </div>
+                <p class="muted" id="outside-save-feedback" role="status"></p>
                 <div class="outside-conflict" id="outside-conflict" hidden>
                   <p>この日に外出の記録があります。</p>
                   <button type="button" class="text-button" id="correct-outside">「外に出た」に変更</button>
@@ -3063,12 +3059,24 @@ function activityFromRow(row) {
   }, row.querySelector(".break-minutes").value);
 }
 
+function setOutsideChoice(value) {
+  for (const choice of $("outside-options").querySelectorAll("button")) {
+    choice.setAttribute("aria-pressed", String(choice.value === value));
+  }
+}
+
+function toggleOutsideChoice(choice) {
+  const value = choice.getAttribute("aria-pressed") === "true" ? null : choice.value;
+  setOutsideChoice(value);
+  queueQuickSave("outside", value);
+}
+
 function editorDraft() {
   const mood = $("mood-options").querySelector("input:checked");
   const activities = Array.from($("activity-list").children, activityFromRow)
     .filter((activity) => Object.values(activity).some(Boolean));
   return { date: editDate, mood: mood ? Number(mood.value) : null, note: $("note").value.trim(), activities,
-    outside: $("outside-options").querySelector("input:checked")?.value ?? null };
+    outside: [...$("outside-options").querySelectorAll("button")].find((choice) => choice.getAttribute("aria-pressed") === "true")?.value ?? null };
 }
 
 function editorDirty(draft = editorDraft()) {
@@ -3331,7 +3339,6 @@ function refreshEditorControls() {
   $("save-label").textContent = working === "save" ? "保存中…" : onlyMemo ? "共有メモを保存" : "変更を保存";
   const note = $("note");
   $("note-count").textContent = note.value.length + " / " + note.maxLength + "文字";
-  $("clear-outside").hidden = !$("outside-options").querySelector("input:checked");
   $("outside-conflict").hidden = draft.outside !== "home" || !hasOutingActivity(ownerState?.days[editDate]);
   $("correct-outside").disabled = working === "save" || activitySavePending;
   $("clear-mood").hidden = !$("mood-options").querySelector("input:checked");
@@ -3367,7 +3374,7 @@ function fillEditor(date, keepComposer = false) {
   }
   $("day-tools").open = false;
   for (const radio of $("mood-options").querySelectorAll("input")) radio.checked = Number(radio.value) === loadedDay?.mood;
-  for (const radio of $("outside-options").querySelectorAll("input")) radio.checked = radio.value === loadedDay?.outside;
+  setOutsideChoice(loadedDay?.outside);
   $("activity-list").replaceChildren();
   for (const activity of loadedDay?.activities ?? []) addActivity(activity);
   renderOvernightEditor();
@@ -3678,7 +3685,7 @@ async function saveNewActivity(activity, date = editDate) {
       addActivity(activity);
       debugEvent("activity-list-appended");
       if (markOutside) {
-        for (const radio of $("outside-options").querySelectorAll("input")) radio.checked = radio.value === "out";
+        setOutsideChoice("out");
         $("outside-save-feedback").textContent = "外に出た · 端末に保存済み";
       }
       renumberActivities();
@@ -4320,13 +4327,13 @@ async function initOwner() {
     const settings = await readItem(ownerDatabase, SETTINGS_ID);
     populateMoodOptions();
     bindTimePicker();
-    for (const radio of $("outside-options").querySelectorAll("input")) {
-      radio.addEventListener("change", () => { if (radio.checked) queueQuickSave("outside", radio.value); });
-    }
+    const outsideChoices = [...$("outside-options").querySelectorAll("button")];
+    for (const choice of outsideChoices) choice.addEventListener("click", () => toggleOutsideChoice(choice));
     $("correct-outside").addEventListener("click", () => {
-      const choice = $("outside-options").querySelector('input[value="out"]');
+      const choice = outsideChoices.find((item) => item.value === "out");
       choice.focus();
-      choice.click();
+      setOutsideChoice("out");
+      queueQuickSave("outside", "out");
     });
     $("owner-gate-form").addEventListener("submit", unlockOwner);
     $("private-memo").addEventListener("toggle", () => {
@@ -4420,11 +4427,6 @@ async function initOwner() {
       refreshEditorControls();
       status("save-message");
       $("mood-options").querySelector("input").focus();
-    });
-    $("clear-outside").addEventListener("click", () => {
-      $("outside-options").querySelector("input:checked").checked = false;
-      queueQuickSave("outside", null);
-      $("outside-options").querySelector("input").focus();
     });
     $("delete-entry").addEventListener("click", deleteEntry);
     $("lock").addEventListener("click", lockOwner);
