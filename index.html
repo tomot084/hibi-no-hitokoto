@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-QeEUjtvOiYeJjI2zeYj7P7p8b+bWV3GLJ2Mc3RLqaos='; style-src 'sha256-0LwKkf5S0vadDDx7Tj7fc/AyOF3Yu79cRs2ITEsdKHg='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-JeH4BmzNPMVlJjlPzox6kNcZQJjAcRIu3bm1PZE2byE='; style-src 'sha256-0LwKkf5S0vadDDx7Tj7fc/AyOF3Yu79cRs2ITEsdKHg='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -1164,7 +1164,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
           <section class="panel compact" aria-labelledby="week-title">
             <p class="overline">週ごとの記録</p>
             <h2 id="week-title">週の振り返り</h2>
-            <p class="muted review-note">月〜日の7日間。外出の記録がない日は「—」で表示します。</p>
+            <p class="muted review-note">「—」はその項目の記録がない日です。</p>
             <div class="week-list" id="week-list"></div>
           </section>
           <section class="panel compact trends" aria-labelledby="trend-title">
@@ -2534,7 +2534,7 @@ function renderMonth() {
     const strip = node("div", "week-days");
     const axis = node("div", "week-axis");
     axis.setAttribute("aria-hidden", "true");
-    axis.append(node("span", "", "外出"), node("span", "", "勤務"));
+    axis.append(node("span", "", "外出"), node("span", "", "仕事"));
     strip.append(axis);
     for (let index = 0; index < 7; index += 1) {
       const value = new Date(firstMonday);
@@ -2543,7 +2543,7 @@ function renderMonth() {
       const day = days[date];
       const cell = button("", "week-day", () => selectCalendarDate(date, true));
       const outsideValue = dayOutside(day);
-      const outside = outsideValue === "out" ? "外出" : outsideValue === "home" ? "家" : "—";
+      const outside = outsideValue === "out" ? "あり" : outsideValue === "home" ? "なし" : "—";
       const actions = new Set(day?.activities.map(({ action }) => action));
       const work = [];
       if (actions.has("仕事")) work.push("勤務");
