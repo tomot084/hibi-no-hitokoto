@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pxDftOcZuKPwZkVbQM/FnqLS7iURljc8qF0VhLptNhE='; style-src 'sha256-TwpafXb5h3rDEPRjRZVcHTQB75WkFOg6KspqZKTFnf0='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-QeEUjtvOiYeJjI2zeYj7P7p8b+bWV3GLJ2Mc3RLqaos='; style-src 'sha256-0LwKkf5S0vadDDx7Tj7fc/AyOF3Yu79cRs2ITEsdKHg='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -665,9 +665,19 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .review-metric > small { font-size: .69rem; color: var(--muted); }
 .review-note { font-size: .75rem; margin-top: 10px; }
 .week-progress { font-size: .72rem; color: var(--muted); }
-.week-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin-block: 8px; }
-.week-day { border: 1px solid transparent; border-radius: 5px; background: transparent; padding: 5px 0; display: grid; justify-items: center; gap: 4px; font-size: .73rem; min-height: 76px; }
-.week-day:hover, .week-day:focus-visible { background: var(--green-soft); }
+.week-days { display: grid; grid-template-columns: 2.1rem repeat(7, minmax(0, 1fr)); gap: 2px; margin-block: 8px; }
+.week-day, .week-axis {
+  display: grid; grid-template-rows: 1.45rem 1.65rem 1.4rem minmax(1.4rem, 1fr);
+  align-items: center; justify-items: center; row-gap: 3px; padding: 5px 0;
+  border: 1px solid transparent; font-size: .73rem; min-width: 0;
+}
+.week-day { border-radius: 5px; background: transparent; }
+.week-day:hover, .week-day:focus-visible, .week-day[aria-pressed="true"] { background: var(--green-soft); }
+.week-axis { color: var(--muted); font-weight: 650; }
+.week-axis > :first-child { grid-row: 3; }
+.week-axis > :last-child { grid-row: 4; }
+.week-work { display: grid; justify-items: center; line-height: 1.35; }
+.week-empty { color: var(--muted); }
 .week-day .mood-face { width: 25px; height: 25px; }
 .week-unrated { min-height: 25px; color: var(--muted); }
 .week-day small { min-width: 0; font-size: .72rem; overflow-wrap: anywhere; }
@@ -2522,6 +2532,10 @@ function renderMonth() {
       : null;
     if (startDate <= current && endDate >= current) row.append(node("span", "week-progress", "今週・途中"));
     const strip = node("div", "week-days");
+    const axis = node("div", "week-axis");
+    axis.setAttribute("aria-hidden", "true");
+    axis.append(node("span", "", "外出"), node("span", "", "勤務"));
+    strip.append(axis);
     for (let index = 0; index < 7; index += 1) {
       const value = new Date(firstMonday);
       value.setUTCDate(value.getUTCDate() + index);
@@ -2529,11 +2543,20 @@ function renderMonth() {
       const day = days[date];
       const cell = button("", "week-day", () => selectCalendarDate(date, true));
       const outsideValue = dayOutside(day);
-      const outside = outsideValue === "out" ? "外出" : outsideValue ? outsideLabel(outsideValue) : "—";
-      cell.setAttribute("aria-label", displayDay(date) + "、気分 " + (day?.mood ? MOODS[day.mood - 1].label : "未記録") + "、" + dayOutsideText(day, true));
+      const outside = outsideValue === "out" ? "外出" : outsideValue === "home" ? "家" : "—";
+      const actions = new Set(day?.activities.map(({ action }) => action));
+      const work = [];
+      if (actions.has("仕事")) work.push("勤務");
+      if (actions.has("欠勤")) work.push("欠勤");
+      cell.setAttribute("aria-pressed", String(date === selectedMonthDate));
+      cell.setAttribute("aria-label", [displayDay(date),
+        "気分 " + (day?.mood ? MOODS[day.mood - 1].label : "未記録"),
+        dayOutsideText(day, true), "勤務の記録 " + (work.join("・") || "未記録")].join("、"));
       cell.append(node("span", "", ["月", "火", "水", "木", "金", "土", "日"][index]));
       cell.append(day?.mood ? face(day.mood) : node("span", "week-unrated", "—"));
-      cell.append(node("small", "", outside));
+      const workStatus = node("small", "week-work");
+      workStatus.append(...(work.length ? work.map((label) => node("span", "", label)) : [node("span", "week-empty", "—")]));
+      cell.append(node("small", outsideValue ? "" : "week-empty", outside), workStatus);
       strip.append(cell);
     }
     row.append(strip, node("p", "", outsideSummary(records)));
