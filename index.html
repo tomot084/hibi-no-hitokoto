@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-abPIGa3RsIc04fRj5Pmeb7WxDtC+WlB1ToovHTIvoac='; style-src 'sha256-YgZ1YdNnLHa1L15xQSxKWg1q8HxhWztvbACawErzIJE='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-0pJMfKWOpXigemGhAbEf3Ajm/0bm6TASm4K0y4FePGQ='; style-src 'sha256-W2IZBFI6xhCivpne4acpQ7cm/IqtvtiwHXkt7BXARnY='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -168,7 +168,7 @@ h3, legend { font-size: 1rem; line-height: 1.45; font-weight: 750; }
 .field { display: grid; gap: 5px; min-width: 0; }
 .field > span, .copy-block > label { font-size: .87rem; font-weight: 710; }
 .field + .field { margin-top: 11px; }
-input:not([type="radio"], [type="checkbox"]), textarea {
+input:not([type="radio"], [type="checkbox"]), textarea, .field select {
   display: block;
   width: 100%;
   min-width: 0;
@@ -969,6 +969,9 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                     <button type="button" class="button secondary" data-action="欠勤" aria-pressed="false">欠勤</button>
                   </div>
                   <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
+                  <label class="field" id="quick-work-location" hidden><span>仕事の場所</span>
+                    <select id="quick-work-place"><option>在宅</option><option>平塚</option></select>
+                  </label>
                   <div class="work-break-control" id="quick-work-break" hidden>
                     <label class="field"><span>休憩の合計（分・任意）</span><input type="text" id="quick-break-minutes" inputmode="numeric" maxlength="4" placeholder="例：60" aria-describedby="quick-break-status"></label>
                     <p class="work-break-status" id="quick-break-status" role="status"></p>
@@ -982,7 +985,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                   <div id="quick-night-option" hidden>
                     <label class="check-row"><input type="checkbox" id="quick-previous-night"><span>前日の夜から</span></label>
                   </div>
-                  <label class="field"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
+                  <label class="field" id="quick-general-location"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
                   <button class="text-button" id="clear-quick-time" type="button" hidden>時刻を入れずに記録する</button>
                     <details class="time-band" id="quick-band"><summary>帯をなぞって時間を選ぶ</summary>
                   <p class="muted" id="preset-hint">帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。</p>
@@ -1219,6 +1222,12 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
             <button class="text-button danger" type="button" id="disconnect">この端末の接続を解除</button>
           </div>
           <p class="message" id="connection-message" role="status"></p>
+          <details class="setup-guide">
+            <summary>過去の仕事の場所をまとめて変更</summary>
+            <p class="muted">2026年11月19日までの仕事の場所を、入力済みの場所も含めて「在宅」にそろえます。</p>
+            <button type="button" class="button secondary" id="set-past-work-home">11月19日までの仕事を在宅にする</button>
+            <p class="message" id="past-work-message" role="status"></p>
+          </details>
         </section>
 
         <section class="panel share-card" aria-labelledby="share-title">
@@ -1303,7 +1312,10 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
           <p class="work-break-status" role="status"></p>
         </div>
         <div class="activity-info">
-          <label class="field"><span>場所</span><input type="text" class="place" maxlength="60" placeholder="場所を入力"></label>
+          <label class="field general-location"><span>場所</span><input type="text" class="place" maxlength="60" placeholder="場所を入力"></label>
+          <label class="field work-location" hidden><span>仕事の場所</span>
+            <select class="work-place"><option>在宅</option><option>平塚</option></select>
+          </label>
           <label class="field"><span>したこと（時刻は任意）</span><input type="text" class="action" maxlength="160" placeholder="したことを入力"></label>
         </div>
         <button type="button" class="text-button move-previous-night" hidden></button>
@@ -2569,7 +2581,7 @@ function activityComposerDraft() {
   const action = $("quick-action").value.trim();
   if (action === "欠勤") return { action, start: "", end: "", place: "" };
   return activityWithBreak({ start: $("quick-start").value, end: $("quick-end").value,
-    place: $("quick-place").value.trim(), action }, $("quick-break-minutes").value);
+    place: action === "仕事" ? $("quick-work-place").value : $("quick-place").value.trim(), action }, $("quick-break-minutes").value);
 }
 
 function activityDraftDirty() {
@@ -2612,6 +2624,7 @@ function bindTimePicker() {
   let timeEdited = false;
   const actionInput = $("quick-action");
   const placeInput = $("quick-place");
+  const workPlace = $("quick-work-place");
   const presets = [...$("time-presets").querySelectorAll("button")];
   let drag = null;
   const startInput = $("quick-start");
@@ -2641,7 +2654,6 @@ function bindTimePicker() {
       $(id).replaceChildren(...rectangles);
     }
     const action = actionInput.value.trim();
-    const place = placeInput.value.trim();
     const range = timeRange({ start: startInput.value, end: endInput.value, action });
     const timeIssue = activityTimeIssue({ start: startInput.value, end: endInput.value });
     $("preset-hint").textContent = overnight
@@ -2653,6 +2665,8 @@ function bindTimePicker() {
     startInput.setAttribute("aria-invalid", String(Boolean(timeIssue)));
     endInput.setAttribute("aria-invalid", String(Boolean(timeIssue)));
     const draft = activityComposerDraft();
+    $("quick-work-location").hidden = action !== "仕事";
+    $("quick-general-location").hidden = action === "仕事";
     const sleep = action === "睡眠";
     const date = composerActivityDate(draft);
     const endDate = overnight ? adjacentDate(date, 1) : date;
@@ -2669,7 +2683,7 @@ function bindTimePicker() {
     const sleepRange = showSleepDates && overnight
       ? displayDay(date) + " " + draft.start + " → " + displayDay(endDate) + " " + draft.end : range;
     const time = valid && action !== "仕事" ? sleepRange + "（" + durationText((finish - start + 1440) % 1440) + "）" : sleepRange;
-    const preview = [time || (sleep ? "寝た時刻・起きた時刻" : ""), time && !timeEdited ? "前回の時刻" : "", place]
+    const preview = [time || (sleep ? "寝た時刻・起きた時刻" : ""), time && !timeEdited ? "前回の時刻" : "", action === "仕事" ? "" : draft.place]
       .filter(Boolean).join(" · ");
     $("quick-preview").textContent = preview || "時間・場所を入れる（任意）";
     detailsLabel.dataset.filled = String(Boolean(preview));
@@ -2693,6 +2707,7 @@ function bindTimePicker() {
     timeEdited = false;
     drag = null;
     for (const input of inputs) input.value = "";
+    workPlace.value = "在宅";
     $("quick-previous-night").checked = false;
     details.open = band.open = false;
     status("activity-save-message");
@@ -2751,6 +2766,7 @@ function bindTimePicker() {
     });
   }
   placeInput.addEventListener("input", paint);
+  workPlace.addEventListener("change", paint);
   $("quick-previous-night").addEventListener("change", paint);
   $("quick-break-minutes").addEventListener("input", paint);
   function editTime() {
@@ -2766,7 +2782,7 @@ function bindTimePicker() {
   $("cancel-activity").addEventListener("click", () => {
     const draft = activityDraftDirty() ? {
       values: inputs.map((input) => input.value), selected, timeEdited, detailsOpen: details.open, bandOpen: band.open,
-      previousNight: $("quick-previous-night").checked
+      previousNight: $("quick-previous-night").checked, workPlace: workPlace.value
     } : cancelledDraft;
     resetComposer();
     composer.open = false;
@@ -2785,6 +2801,7 @@ function bindTimePicker() {
     const draft = cancelledDraft;
     setCancelledDraft(undefined);
     inputs.forEach((input, index) => { input.value = draft.values[index]; });
+    workPlace.value = draft.workPlace;
     selected = draft.selected;
     timeEdited = draft.timeEdited;
     composer.open = true;
@@ -3014,11 +3031,12 @@ async function unlockOwner(event) {
 }
 
 function activityFromRow(row) {
+  const action = row.querySelector(".action").value.trim();
   return activityWithBreak({
     start: row.querySelector(".start-time").value,
     end: row.querySelector(".end-time").value,
-    place: row.querySelector(".place").value.trim(),
-    action: row.querySelector(".action").value.trim()
+    place: action === "仕事" ? row.querySelector(".work-place").value : row.querySelector(".place").value.trim(),
+    action
   }, row.querySelector(".break-minutes").value);
 }
 
@@ -3189,6 +3207,8 @@ function renderOvernightEditor() {
 function renderActivitySummary(row) {
   const activity = activityFromRow(row);
   const { start, end, action, place } = activity;
+  row.querySelector(".work-location").hidden = action !== "仕事";
+  row.querySelector(".general-location").hidden = action === "仕事";
   row.querySelector(".activity-title").textContent = timeRange(activity) || "時刻なし";
   row.querySelector(".activity-description").textContent = [action || "内容を入力", place].filter(Boolean).join(" · ");
   const overnight = crossesMidnight({ start, end });
@@ -3242,6 +3262,16 @@ function addActivity(activity = {}, focus = false) {
   row.querySelector(".start-time").value = activity.start ?? "";
   row.querySelector(".end-time").value = activity.end ?? "";
   row.querySelector(".place").value = activity.place ?? "";
+  if (activity.action === "仕事") {
+    const place = activity.place ?? "";
+    const select = row.querySelector(".work-place");
+    if (place !== "在宅" && place !== "平塚") {
+      const option = node("option", "", place || "未記録");
+      option.value = place;
+      select.append(option);
+    }
+    select.value = place;
+  }
   row.querySelector(".action").value = activity.action ?? "";
   row.querySelector(".break-minutes").value = activity.breakMinutes ?? "";
   row.addEventListener("input", () => renderActivitySummary(row));
@@ -3380,6 +3410,7 @@ function renderOwnerConnection() {
     : "GitHubをつなぐと、全日分を共有できます。";
   $("connect").disabled = Boolean(working) || location.protocol !== "https:";
   for (const id of ["sync-now", "update-token", "disconnect", "lock"]) $(id).disabled = Boolean(working) || activitySavePending;
+  $("set-past-work-home").disabled = Boolean(working) || activitySavePending;
   renderPrivateMemo();
   refreshEditorControls();
   if (["sync", "connect", "token"].includes(working)) syncPill("同期中", "wait");
@@ -3789,6 +3820,52 @@ async function syncInside(resolution) {
   status("connection-message", "GitHubに同期しました。");
 }
 
+function pastWorkAtHome(days) {
+  const nextDays = { ...days };
+  let count = 0;
+  for (const [date, day] of Object.entries(days)) {
+    if (date > "2026-11-19") continue;
+    const activities = day.activities.map((activity) => {
+      if (activity.action !== "仕事" || activity.place === "在宅") return activity;
+      count += 1;
+      return { ...activity, place: "在宅" };
+    });
+    if (activities.some((activity, index) => activity !== day.activities[index])) {
+      nextDays[date] = { ...day, activities, rev: crypto.randomUUID() };
+    }
+  }
+  return { days: nextDays, count };
+}
+
+async function setPastWorkHome() {
+  if (!ownerKey || working || activitySavePending) return;
+  const message = "past-work-message";
+  if (editorDirty() || activityDraftDirty()) {
+    status(message, "入力中の記録を保存してから、まとめて変更してください。", true);
+    return;
+  }
+  let saved = 0;
+  try {
+    await runOwnerOperation("save", async () => {
+      status(message, "記録を確認しています…");
+      if (ownerState.cloud) await syncInside();
+      const { days, count } = pastWorkAtHome(ownerState.days);
+      if (!count) {
+        status(message, "対象の仕事はすべて在宅になっています。");
+        return;
+      }
+      await persistState({ ...ownerState, days });
+      saved = count;
+      if (ownerState.cloud) await syncInside();
+      status(message, "仕事" + count + "件を在宅に変更しました。" + (ownerState.cloud ? "共有にも反映済みです。" : ""));
+    });
+  } catch (error) {
+    if (ownerState.cloud) reportSyncError(error, {});
+    status(message, saved ? "端末では在宅に変更済みです。「今すぐ同期」で共有に反映できます。"
+      : "まとめて変更できませんでした。" + (ownerState.cloud ? "同期の表示を確認してください。" : ownerError(error)), true);
+  }
+}
+
 function reportSyncError(error, options) {
   syncIssue = error instanceof RecordConflict ? ownerError(error) : error.message;
   status("connection-message", syncIssue, true);
@@ -3938,8 +4015,7 @@ function diagnosticReport() {
     composerOpen: $("time-composer").open, composerDirty: activityDraftDirty(),
     savedActivities: activities(saved?.activities), loadedActivities: activities(loadedDay?.activities),
     displayedActivities: activities(draft.activities),
-    composer: activities([{ start: $("quick-start").value, end: $("quick-end").value,
-      action: $("quick-action").value.trim(), place: $("quick-place").value.trim() }])[0],
+    composer: activities([activityComposerDraft()])[0],
     noteChanged: draft.note !== (saved?.note ?? ""),
     events: debugEvents.slice()
   }, null, 2);
@@ -4332,6 +4408,7 @@ async function initOwner() {
     $("open-share-settings").addEventListener("click", () => setPanel("share", true));
     $("connect-form").addEventListener("submit", connectGitHub);
     $("sync-now").addEventListener("click", () => synchronize());
+    $("set-past-work-home").addEventListener("click", setPastWorkHome);
     $("update-token-form").addEventListener("submit", updateToken);
     $("disconnect").addEventListener("click", disconnect);
     $("show-code").addEventListener("click", toggleCode);
