@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-0pJMfKWOpXigemGhAbEf3Ajm/0bm6TASm4K0y4FePGQ='; style-src 'sha256-W2IZBFI6xhCivpne4acpQ7cm/IqtvtiwHXkt7BXARnY='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pxDftOcZuKPwZkVbQM/FnqLS7iURljc8qF0VhLptNhE='; style-src 'sha256-TwpafXb5h3rDEPRjRZVcHTQB75WkFOg6KspqZKTFnf0='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -670,7 +670,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .week-day:hover, .week-day:focus-visible { background: var(--green-soft); }
 .week-day .mood-face { width: 25px; height: 25px; }
 .week-unrated { min-height: 25px; color: var(--muted); }
-.week-day small { font-size: .72rem; }
+.week-day small { min-width: 0; font-size: .72rem; overflow-wrap: anywhere; }
 .leave-actions { display: grid; gap: 10px; margin-top: 18px; }
 #leave-note { margin-top: 12px; }
 #leave-dialog { max-width: min(440px, calc(100vw - 32px)); }
@@ -2529,7 +2529,7 @@ function renderMonth() {
       const day = days[date];
       const cell = button("", "week-day", () => selectCalendarDate(date, true));
       const outsideValue = dayOutside(day);
-      const outside = outsideValue === "out" ? "外出" : outsideValue === "home" ? "在宅" : "—";
+      const outside = outsideValue === "out" ? "外出" : outsideValue ? outsideLabel(outsideValue) : "—";
       cell.setAttribute("aria-label", displayDay(date) + "、気分 " + (day?.mood ? MOODS[day.mood - 1].label : "未記録") + "、" + dayOutsideText(day, true));
       cell.append(node("span", "", ["月", "火", "水", "木", "金", "土", "日"][index]));
       cell.append(day?.mood ? face(day.mood) : node("span", "week-unrated", "—"));
