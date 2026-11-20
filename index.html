@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Q6vkkm8mGQS7JmLuaU7R9lcQgv66p2tWGMbT+Qx4554='; style-src 'sha256-cX7miKlEHiM+L4gkZ5Yaim41xw2qANB4YGGdEpRXUPM='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-31YYJ+treZvh6beZqmI39eRNnb0xqLnl/Y6nqDa3Gzw='; style-src 'sha256-9YRdZylHh3+LIIYQQAGMmCSV2vBw5tm/E5hedp8MctI='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -237,12 +237,10 @@ legend { padding: 0; }
   cursor: pointer;
 }
 .mood-choice:hover { background: var(--green-pale); }
-.mood-choice:has(input:checked) { border-color: var(--green); background: var(--green-soft); box-shadow: inset 0 0 0 1px var(--green); }
-.mood-choice:focus-within { outline: 3px solid #567a5c; outline-offset: 2px; }
-.mood-choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.mood-choice[aria-pressed="true"] { border-color: var(--green); background: var(--green-soft); box-shadow: inset 0 0 0 1px var(--green); }
+.mood-choice:focus-visible { outline: 3px solid #567a5c; outline-offset: 2px; }
 .mood-face { width: 36px; height: 36px; flex-shrink: 0; }
-.mood-choice input:checked ~ span { color: var(--green-dark); font-weight: 800; }
-.mood-section .text-button { margin-block: 2px -6px; }
+.mood-choice[aria-pressed="true"] span { color: var(--green-dark); font-weight: 800; }
 .outside-section { margin-top: 12px; }
 .outside-row { display: grid; grid-template-columns: auto minmax(0, 320px); align-items: center; gap: 10px; }
 #outside-label { color: var(--muted); font-size: .8rem; font-weight: 680; }
@@ -560,7 +558,7 @@ body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color:
 .activity-undo:has(#undo-activity:not([hidden])) { min-height: 40px; }
 .mood-section { border-top: 1px solid var(--line); padding-top: 17px; }
 .mood-choice { border-radius: 6px; background: transparent; }
-.mood-choice:has(input:checked) { background: var(--green-soft); border-color: var(--green); box-shadow: none; }
+.mood-choice[aria-pressed="true"] { background: var(--green-soft); border-color: var(--green); box-shadow: none; }
 .note-field { margin-top: 20px; }
 textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e8e2 32px) !important; line-height: 32px; padding-top: 0; }
 .save-state { font-size: .75rem; color: var(--muted); }
@@ -776,7 +774,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
   .reader-overview .recent-days { gap: 4px; }
   .reader-overview .recent-day { min-width: 0; }
   .entry-list button, .recent-day { scroll-margin-block: 12px; }
-  .mood-choice:has(input:focus-visible), .outside-options button:focus-visible {
+  .mood-choice:focus-visible, .outside-options button:focus-visible {
     outline: 3px solid var(--green);
     outline-offset: 3px;
   }
@@ -940,7 +938,6 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                 <legend>その日の気分 <span class="auto-tag">選ぶと保存</span></legend>
                 <div class="mood-options" id="mood-options"></div>
                 <p class="muted" id="mood-save-feedback" role="status"></p>
-                <button type="button" class="text-button" id="clear-mood" hidden>気分の選択を外す</button>
               </fieldset>
 
               <fieldset class="outside-section" aria-labelledby="outside-label">
@@ -3099,7 +3096,7 @@ function toggleOutsideChoice(choice) {
 }
 
 function editorDraft() {
-  const mood = $("mood-options").querySelector("input:checked");
+  const mood = [...$("mood-options").querySelectorAll("button")].find((choice) => choice.getAttribute("aria-pressed") === "true");
   const activities = Array.from($("activity-list").children, activityFromRow)
     .filter((activity) => Object.values(activity).some(Boolean));
   return { date: editDate, mood: mood ? Number(mood.value) : null, note: $("note").value.trim(), activities,
@@ -3154,7 +3151,7 @@ async function flushQuickSave() {
       for (const field of Object.keys(request.patch)) {
         if (Object.hasOwn(pendingQuickSave?.patch ?? {}, field)) continue;
         const value = request.patch[field];
-        $(field + "-save-feedback").textContent = field !== "outside" ? "端末に保存しました。"
+        $(field + "-save-feedback").textContent = field === "mood" ? (value === null ? "気分を未記録に戻しました。" : "端末に保存しました。")
           : value ? outsideLabel(value) + " · 端末に保存済み" : "外出を未記録に戻しました。";
       }
       renderRecent();
@@ -3172,16 +3169,24 @@ async function flushQuickSave() {
   }
 }
 
+function setMoodChoice(value) {
+  for (const choice of $("mood-options").querySelectorAll("button")) {
+    choice.setAttribute("aria-pressed", String(Number(choice.value) === value));
+  }
+}
+
 function populateMoodOptions() {
   const options = MOODS.map((mood, index) => {
-    const label = node("label", "mood-choice");
-    const radio = node("input");
-    radio.type = "radio";
-    radio.name = "mood";
-    radio.value = index + 1;
-    radio.addEventListener("change", () => { if (radio.checked) queueQuickSave("mood", Number(radio.value)); });
-    label.append(radio, face(index + 1), node("span", "", mood.label));
-    return label;
+    const value = index + 1;
+    const choice = button("", "mood-choice", () => {
+      const next = choice.getAttribute("aria-pressed") === "true" ? null : value;
+      setMoodChoice(next);
+      queueQuickSave("mood", next);
+    });
+    choice.value = String(value);
+    choice.setAttribute("aria-pressed", "false");
+    choice.append(face(value), node("span", "", mood.label));
+    return choice;
   });
   $("mood-options").replaceChildren(...options);
 }
@@ -3471,7 +3476,6 @@ function refreshEditorControls() {
   $("note-count").textContent = note.value.length + " / " + note.maxLength + "文字";
   $("outside-conflict").hidden = draft.outside !== "home" || !hasOutingActivity(ownerState?.days[editDate]);
   $("correct-outside").disabled = working === "save" || activitySavePending;
-  $("clear-mood").hidden = !$("mood-options").querySelector("input:checked");
   $("delete-entry").hidden = !ownerState?.days[editDate];
   $("day-tools").hidden = !ownerState?.days[editDate];
   $("editor-fields").disabled = working === "save" || activitySavePending;
@@ -3503,7 +3507,7 @@ function fillEditor(date, keepComposer = false) {
     refreshTimePresets();
   }
   $("day-tools").open = false;
-  for (const radio of $("mood-options").querySelectorAll("input")) radio.checked = Number(radio.value) === loadedDay?.mood;
+  setMoodChoice(loadedDay?.mood);
   setOutsideChoice(loadedDay?.outside);
   $("activity-list").replaceChildren();
   for (const activity of loadedDay?.activities ?? []) addActivity(activity);
@@ -4570,13 +4574,6 @@ async function initOwner() {
     }
     $("go-today").addEventListener("click", () => {
       if (chooseEditorDate(isoToday())) $("editor-title").focus();
-    });
-    $("clear-mood").addEventListener("click", () => {
-      $("mood-options").querySelector("input:checked").checked = false;
-      queueQuickSave("mood", null);
-      refreshEditorControls();
-      status("save-message");
-      $("mood-options").querySelector("input").focus();
     });
     $("delete-entry").addEventListener("click", deleteEntry);
     $("lock").addEventListener("click", lockOwner);
