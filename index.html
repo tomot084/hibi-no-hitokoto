@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-1BJOPzCAvune3XeuPxH+KBfbIWp7+pHDqhD0toranAA='; style-src 'sha256-5CcuztS0YN2eQ0799Lj5iT8LAcLhUloehKyn8xkntyk='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ZivV5APeFVaWWh00Lb+riihyZYkCasFR1RAVHp86Sdk='; style-src 'sha256-zM5IQPLIsLA5Z7vUtYnNc7l92JKks3tvKiUucpnTCQ0='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -474,11 +474,6 @@ main { padding-bottom: max(17px, env(safe-area-inset-bottom)); }
 .quick-time summary { padding: 3px 0; font-weight: 750; }
 .time-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 7px; }
 .time-presets [aria-pressed="true"] { background: var(--green); color: white; }
-#time-paint { margin: 10px 0; touch-action: none; user-select: none; }
-#time-paint svg { display: block; width: 100%; height: 44px; cursor: crosshair; }
-.time-track { fill: #dbe5d4; }
-.time-selection { fill: #638463; }
-.clock-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: .75rem; margin: 5px 0 2px; }
 
 /* A compact diary page, with the recorded day as the main surface. */
 :root {
@@ -531,8 +526,6 @@ body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color:
 .time-presets { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
 .time-presets .button { min-width: 68px; flex-shrink: 0; border-radius: 5px; font-size: .83rem; }
 .time-presets [aria-pressed="true"] { background: var(--green); border-color: var(--green); }
-.time-track { fill: #e0e3eb; }
-.time-selection { fill: #6f7fa6; }
 .activity-list { gap: 0; }
 .activity { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0; }
 .activity-summary {
@@ -604,7 +597,6 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
   .save-bar { padding-inline: 12px; gap: 7px; }
 }
 
-.time-selection { fill: currentColor; }
 .time-presets [data-action="仕事"][aria-pressed="true"] { background: #52668a; border-color: #52668a; }
 .time-presets [data-action="睡眠"][aria-pressed="true"] { background: #756580; border-color: #756580; }
 .time-presets [data-action="外出"][aria-pressed="true"] { background: #4d6d5b; border-color: #4d6d5b; }
@@ -993,16 +985,6 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                   </div>
                   <label class="field" id="quick-general-location"><span>場所</span><input type="text" id="quick-place" maxlength="60"></label>
                   <button class="text-button" id="clear-quick-time" type="button" hidden>時刻を入れずに記録する</button>
-                    <details class="time-band" id="quick-band"><summary>帯をなぞって時間を選ぶ</summary>
-                  <p class="muted" id="preset-hint">帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。</p>
-                  <div id="time-paint" aria-hidden="true">
-                    <div class="clock-labels"><span>0時</span><span>6時</span><span>12時</span></div>
-                    <svg id="paint-am" viewBox="0 0 720 44" preserveAspectRatio="none"><rect class="time-track" width="720" height="44" rx="8"/><g id="selection-am"></g></svg>
-                    <div class="clock-labels"><span>12時</span><span>18時</span><span>24時</span></div>
-                    <svg id="paint-pm" viewBox="0 0 720 44" preserveAspectRatio="none"><rect class="time-track" width="720" height="44" rx="8"/><g id="selection-pm"></g></svg>
-                  </div>
-
-                  </details>
                   </details>
                   <p id="quick-time-error" role="status"></p>
                   <button class="button primary full" type="button" id="add-selected-time">この行動を保存</button>
@@ -2645,39 +2627,22 @@ function bindTimePicker() {
   const placeInput = $("quick-place");
   const workPlace = $("quick-work-place");
   const presets = [...$("time-presets").querySelectorAll("button")];
-  let drag = null;
   const startInput = $("quick-start");
   const endInput = $("quick-end");
   const inputs = [actionInput, placeInput, startInput, endInput, $("quick-break-minutes")];
   const composer = $("time-composer");
   const details = $("quick-details");
-  const band = $("quick-band");
   const detailsLabel = $("quick-details-label");
-  const tracks = [$("paint-am"), $("paint-pm")];
-  const clock = (value) => String(Math.floor(value / 60) % 24).padStart(2, "0") + ":" + String(value % 60).padStart(2, "0");
 
   function paint() {
-    if (cancelledDraft && !drag && activityDraftDirty()) setCancelledDraft(undefined);
+    if (cancelledDraft && activityDraftDirty()) setCancelledDraft(undefined);
     const start = clockMinute(startInput.value);
     const finish = clockMinute(endInput.value);
     const overnight = crossesMidnight({ start: startInput.value, end: endInput.value });
     const valid = validTime(startInput.value) && startInput.value && validTime(endInput.value) && endInput.value && start !== finish;
-    const ranges = valid ? [[start, overnight ? 1440 : finish]] : [];
-    for (const [index, id] of ["selection-am", "selection-pm"].entries()) {
-      const offset = index * 720;
-      const rectangles = ranges.filter(([left, right]) => right > offset && left < offset + 720)
-        .map(([left, right]) => svgNode("rect", {
-          class: "time-selection", color: activityColor(actionInput.value.trim()), x: Math.max(left, offset) - offset, y: 2,
-          width: Math.min(right, offset + 720) - Math.max(left, offset), height: 40, rx: 6
-        }));
-      $(id).replaceChildren(...rectangles);
-    }
     const action = actionInput.value.trim();
     const range = timeRange({ start: startInput.value, end: endInput.value, action });
     const timeIssue = activityTimeIssue({ start: startInput.value, end: endInput.value });
-    $("preset-hint").textContent = overnight
-      ? "帯は開始日の分です。翌日の終了は時刻欄で変更できます。"
-      : "帯をなぞると15分刻みで選べます。時刻のタップでも変更できます。";
     $("clear-quick-time").hidden = !range;
     $("quick-time-error").textContent = timeIssue
       ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。" : "";
@@ -2724,11 +2689,10 @@ function bindTimePicker() {
   function resetComposer() {
     selected = null;
     timeEdited = false;
-    drag = null;
     for (const input of inputs) input.value = "";
     workPlace.value = "在宅";
     $("quick-previous-night").checked = false;
-    details.open = band.open = false;
+    details.open = false;
     status("activity-save-message");
     paint();
   }
@@ -2800,7 +2764,7 @@ function bindTimePicker() {
   });
   $("cancel-activity").addEventListener("click", () => {
     const draft = activityDraftDirty() ? {
-      values: inputs.map((input) => input.value), selected, timeEdited, detailsOpen: details.open, bandOpen: band.open,
+      values: inputs.map((input) => input.value), selected, timeEdited, detailsOpen: details.open,
       previousNight: $("quick-previous-night").checked, workPlace: workPlace.value
     } : cancelledDraft;
     resetComposer();
@@ -2825,58 +2789,11 @@ function bindTimePicker() {
     timeEdited = draft.timeEdited;
     composer.open = true;
     details.open = draft.detailsOpen;
-    band.open = draft.bandOpen;
     $("quick-previous-night").checked = draft.previousNight;
     paint();
     $("add-activity").focus();
   });
 
-  function position(event) {
-    const rectangles = tracks.map((track) => track.getBoundingClientRect());
-    const middle = (rectangles[0].bottom + rectangles[1].top) / 2;
-    const index = event.clientY >= middle ? 1 : 0;
-    const rect = rectangles[index];
-    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    return index * 720 + Math.min(705, Math.floor(fraction * 48) * 15);
-  }
-
-  const surface = $("time-paint");
-  surface.addEventListener("pointerdown", (event) => {
-    if (activitySavePending || !event.isPrimary || event.button !== 0) return;
-    const anchor = position(event);
-    drag = { pointer: event.pointerId, anchor, start: startInput.value, end: endInput.value, timeEdited };
-    surface.setPointerCapture(event.pointerId);
-    startInput.value = clock(anchor);
-    endInput.value = clock(anchor + 15);
-    editTime();
-  });
-  surface.addEventListener("pointermove", (event) => {
-    if (activitySavePending || !drag || drag.pointer !== event.pointerId) return;
-    const current = position(event);
-    startInput.value = clock(Math.min(current, drag.anchor));
-    endInput.value = clock(Math.max(current, drag.anchor) + 15);
-    paint();
-  });
-  surface.addEventListener("pointerup", (event) => {
-    if (!drag || drag.pointer !== event.pointerId) return;
-    drag = null;
-    if (cancelledDraft) setCancelledDraft(undefined);
-    surface.releasePointerCapture(event.pointerId);
-  });
-  surface.addEventListener("pointercancel", () => {
-    if (drag) {
-      startInput.value = drag.start;
-      endInput.value = drag.end;
-      timeEdited = drag.timeEdited;
-      drag = null;
-      paint();
-    }
-  });
-  surface.addEventListener("lostpointercapture", () => {
-    if (!drag) return;
-    drag = null;
-    paint();
-  });
   for (const input of [startInput, endInput]) {
     input.addEventListener("input", editTime);
     input.addEventListener("change", editTime);
