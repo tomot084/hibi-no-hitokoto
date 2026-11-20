@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-31YYJ+treZvh6beZqmI39eRNnb0xqLnl/Y6nqDa3Gzw='; style-src 'sha256-9YRdZylHh3+LIIYQQAGMmCSV2vBw5tm/E5hedp8MctI='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-U/qZLxxB5x69uluiKpsUtkONN+LS1j+GRnrBC7t/ftk='; style-src 'sha256-8TJnjpf/FYuTxZuUNGb5FEmvxbpsfm4U3E9at49UXTc='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -549,7 +549,10 @@ body[data-mode="reader"] .mode-pill { background: transparent; border: 0; color:
 .time-hint { color: var(--muted); font-size: .8rem; margin-block: 6px; }
 .time-hint:empty { display: none; }
 .time-now-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-#previous-outing-returns button { text-align: left; }
+#outing-returns { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+#outing-returns button { min-height: 44px; text-align: left; }
+.activity-editor-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#quick-details[data-preset] > summary { display: none; }
 .overnight-row { padding: 12px 2px; border-bottom: 1px solid var(--line); }
 .overnight-meta { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
 .overnight-row .timeline-action { font-weight: 650; }
@@ -960,7 +963,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                   <h3 id="time-title">この日の行動</h3>
                   <button type="button" class="text-button" id="log-last-night">昨夜の睡眠を記録</button>
                 </div>
-                <div id="previous-outing-returns" hidden></div>
+                <div id="outing-returns" hidden></div>
                 <details class="quick-time" id="time-composer">
                   <summary id="add-activity">＋ したことを追加</summary>
                   <div class="time-presets" id="time-presets" aria-label="行動を選ぶ">
@@ -970,8 +973,9 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                     <button type="button" class="button secondary" data-action="外出" aria-pressed="false">外出</button>
                     <button type="button" class="button secondary" data-action="散歩" aria-pressed="false">散歩</button>
                     <button type="button" class="button secondary" data-action="欠勤" aria-pressed="false">欠勤</button>
+                    <button type="button" class="button secondary" id="custom-activity" aria-pressed="false">その他</button>
                   </div>
-                  <label class="field"><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
+                  <label class="field" id="quick-action-field" hidden><span>何をした？</span><input type="text" id="quick-action" maxlength="160" placeholder="散歩、買い物、家で休んだなど"></label>
                   <label class="field" id="quick-work-location" hidden><span>仕事の場所</span>
                     <select id="quick-work-place"><option>在宅</option><option>平塚</option></select>
                   </label>
@@ -1295,11 +1299,11 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
   </dialog>
 
   <dialog id="outing-return-dialog" class="panel dialog" aria-labelledby="outing-return-title">
-    <h2 id="outing-return-title">前日の外出の帰宅を記録</h2>
+    <h2 id="outing-return-title">帰宅を記録</h2>
     <p class="muted" id="outing-return-departure"></p>
     <form id="outing-return-form">
       <label class="field"><span id="outing-return-label">帰宅時刻</span><input id="outing-return-time" type="time" step="60" required></label>
-      <button type="button" class="text-button time-now" id="outing-return-now" aria-label="帰宅時刻に今を入れる">今</button>
+      <button type="button" class="text-button time-now" id="outing-return-now">今の時刻で保存</button>
       <p class="time-hint" id="outing-return-hint"></p>
       <p class="message" id="outing-return-message" role="status"></p>
       <button type="submit" class="button primary" id="outing-return-save">帰宅を保存</button>
@@ -1349,7 +1353,11 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
         </div>
         <button type="button" class="text-button move-previous-night" hidden></button>
         <p class="message move-night-message" role="status"></p>
-        <button type="button" class="text-button danger remove-activity">この行動を削除</button>
+        <div class="activity-editor-actions">
+          <button type="button" class="button primary save-activity-edit" disabled>変更を保存</button>
+          <button type="button" class="text-button danger remove-activity">この行動を削除</button>
+        </div>
+        <p class="message error activity-edit-message" role="status"></p>
       </div>
     </details>
   </template>
@@ -2505,10 +2513,19 @@ function calendarDateButton(date, day, selected, current, hasOvernight) {
   return action;
 }
 
-function selectCalendarDate(date, focus = false) {
+function selectCalendarDate(date, focus = false, showDetail = false) {
   resetCalendar(date);
   renderMonth();
-  if (focus) $("calendar-grid").querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+  if (showDetail) {
+    const detail = $("month-detail");
+    const heading = detail.querySelector("h2");
+    heading.focus({ preventScroll: true });
+    const headerBottom = $("journal").querySelector(".journal-bar")?.getBoundingClientRect().bottom ?? 0;
+    const bounds = heading.getBoundingClientRect();
+    if (bounds.top < headerBottom || bounds.bottom > window.innerHeight) {
+      detail.scrollIntoView({ block: "start" });
+    }
+  } else if (focus) $("calendar-grid").querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
 }
 
 function changeCalendarMonth(month) {
@@ -2609,7 +2626,7 @@ function renderMonth() {
       value.setUTCDate(value.getUTCDate() + index);
       const date = value.toISOString().slice(0, 10);
       const day = days[date];
-      const cell = button("", "week-day", () => selectCalendarDate(date, true));
+      const cell = button("", "week-day", () => selectCalendarDate(date, false, true));
       const outsideValue = dayOutside(day);
       const outside = outsideValue === "out" ? "あり" : outsideValue === "home" ? "なし" : "—";
       const actions = new Set(day?.activities.map(({ action }) => action));
@@ -2714,7 +2731,9 @@ function bindTimePicker() {
   const actionInput = $("quick-action");
   const placeInput = $("quick-place");
   const workPlace = $("quick-work-place");
-  const presets = [...$("time-presets").querySelectorAll("button")];
+  const custom = $("custom-activity");
+  const presets = [...$("time-presets").querySelectorAll("button")].filter((preset) => preset.dataset.action);
+  const focusTime = () => (selected && selected !== custom ? startInput : detailsLabel).focus({ preventScroll: true });
   const startInput = $("quick-start");
   const endInput = $("quick-end");
   const breakInput = $("quick-break-minutes");
@@ -2771,7 +2790,12 @@ function bindTimePicker() {
     reuseTime.hidden = !previous || (startInput.value === previous.start && endInput.value === previous.end);
     reuseTime.textContent = previous ? "前回の " + timeRange(previous) + " を使う" : "";
     const absent = action === "欠勤";
-    details.hidden = absent;
+    const standard = selected && selected !== custom;
+    details.toggleAttribute("data-preset", Boolean(standard));
+    $("quick-action-field").hidden = Boolean(standard) || !selected;
+    details.hidden = absent || !selected;
+    $("add-selected-time").hidden = !selected;
+    custom.setAttribute("aria-pressed", String(selected === custom));
     $("quick-time-error").hidden = absent;
     $("add-selected-time").textContent = absent ? "欠勤を保存" : sleep ? "睡眠を保存"
       : outing ? (draft.start && !draft.end ? "出発を保存" : "外出を保存") : "この行動を保存";
@@ -2813,12 +2837,23 @@ function bindTimePicker() {
     preset.addEventListener("click", () => {
       selected = selected === preset ? null : preset;
       actionInput.value = selected?.dataset.action ?? "";
-      if (["仕事", "睡眠", "外出"].includes(actionInput.value)) details.open = true;
+      if (selected) details.open = true;
       if (actionInput.value !== "睡眠") night.checked = false;
       status("activity-save-message");
       paint();
     });
   }
+
+  custom.addEventListener("click", () => {
+    if (selected !== custom) {
+      if (selected) actionInput.value = "";
+      selected = custom;
+    }
+    night.checked = actionInput.value.trim() === "睡眠" && night.checked;
+    status("activity-save-message");
+    paint();
+    actionInput.focus();
+  });
 
   $("log-last-night").addEventListener("click", () => {
     if (activityDraftDirty() || activitySavePending) return;
@@ -2827,11 +2862,11 @@ function bindTimePicker() {
     night.checked = true;
     composer.open = details.open = true;
     paint();
-    detailsLabel.focus();
+    focusTime();
   });
 
   actionInput.addEventListener("input", () => {
-    if (selected && actionInput.value.trim() !== selected.dataset.action) selected = null;
+    selected = custom;
     if (["仕事", "睡眠", "外出"].includes(actionInput.value.trim())) details.open = true;
     if (actionInput.value.trim() !== "睡眠") night.checked = false;
     paint();
@@ -2855,7 +2890,7 @@ function bindTimePicker() {
     startInput.value = previous.start;
     endInput.value = previous.end;
     paint();
-    detailsLabel.focus({ preventScroll: true });
+    focusTime();
   });
   for (const [buttonId, input] of [["quick-start-now", startInput], ["quick-end-now", endInput]]) {
     $(buttonId).addEventListener("click", () => {
@@ -2866,7 +2901,7 @@ function bindTimePicker() {
     clearActivityTimes(startInput, endInput, breakInput);
     night.checked = false;
     paint();
-    detailsLabel.focus({ preventScroll: true });
+    focusTime();
   });
   $("cancel-activity").addEventListener("click", () => {
     const draft = activityDraftDirty() ? {
@@ -3266,23 +3301,25 @@ function renderOvernightEditor() {
     }));
   }
   $("time-empty").hidden = activities.length > 0 || $("activity-list").children.length > 0;
-  renderPreviousOutingReturns();
+  renderOutingReturns();
 }
 
-function renderPreviousOutingReturns() {
-  const container = $("previous-outing-returns");
-  container.replaceChildren();
-  container.hidden = true;
-  if (editDate !== isoToday()) return;
+function renderOutingReturns() {
+  const container = $("outing-returns");
   const previous = adjacentDate(editDate, -1);
-  for (const activity of visibleDays()[previous]?.activities ?? []) {
-    if (activity.action !== "外出" || !activity.start || activity.end) continue;
-    const departure = [activity.start + "出発", activity.place].filter(Boolean).join("・");
-    container.append(button("昨日の外出に帰宅時刻を入れる（" + departure + "）", "text-button", () => {
-      openOutingReturn(previous, editDate, activity);
+  const returnDates = previous ? [editDate, previous] : [editDate];
+  const days = visibleDays();
+  const shortcuts = returnDates.flatMap((date) => (days[date]?.activities ?? [])
+    .filter((activity) => activity.action === "外出" && activity.start && !activity.end)
+    .map((activity) => {
+      const day = date === editDate ? "" : editDate === isoToday() ? "昨日" : displayDay(date);
+      const departure = [day, activity.start + "出発", activity.place].filter(Boolean).join("・");
+      return button("帰宅を記録（" + departure + "）", "button secondary", () => {
+        openOutingReturn(date, editDate, activity);
+      });
     }));
-  }
-  container.hidden = !container.childElementCount;
+  container.replaceChildren(...shortcuts);
+  container.hidden = !shortcuts.length;
 }
 
 let outingReturn;
@@ -3298,52 +3335,91 @@ function openOutingReturn(departureDate, returnDate, activity) {
   $("outing-return-dialog").showModal();
 }
 
-function outingWithReturn(activity, time) {
-  // Both dates are known, including outings that lasted a full day or longer.
-  return { ...activity, end: time, nextDay: true };
+function outingWithReturn(activity, time, nextDay) {
+  return { ...activity, end: time, ...(nextDay ? { nextDay: true } : {}) };
 }
 
 function refreshOutingReturn() {
   if (!outingReturn) return;
   const { departureDate, returnDate, activity } = outingReturn;
   const value = $("outing-return-time").value;
+  const nextDay = returnDate !== departureDate;
   $("outing-return-now").hidden = returnDate !== isoToday();
-  $("outing-return-hint").textContent = value ? overnightTimeHint(outingWithReturn(activity, value), departureDate) : "";
+  $("outing-return-hint").textContent = value && nextDay
+    ? overnightTimeHint(outingWithReturn(activity, value, nextDay), departureDate) : "";
   $("outing-return-save").disabled = !value;
 }
 
 async function saveOutingReturn(event) {
   event.preventDefault();
-  if (!ownerKey || !outingReturn) return;
-  const { departureDate, activity } = outingReturn;
+  if (!outingReturn) return;
+  const { departureDate, returnDate, activity } = outingReturn;
   const time = $("outing-return-time").value;
   if (!time || !validTime(time)) return;
-  if (working || activitySavePending) {
-    status("outing-return-message", "処理が終わってから、もう一度保存してください。");
+  const message = $("outing-return-message");
+  message.classList.add("error");
+  const nextDay = returnDate !== departureDate;
+  if (!nextDay && time <= activity.start) {
+    status("outing-return-message", "出発より後の時刻を選んでください。翌日に帰宅した場合は、翌日の画面から記録できます。", true);
     return;
   }
-  let saved = false;
-  try {
-    await runOwnerOperation("save", async () => {
-      const day = ownerState.days[departureDate];
-      const index = day?.activities.findIndex((item) => sameActivity(item, activity)) ?? -1;
-      if (index < 0) {
-        status("outing-return-message", "この外出の記録が変更されています。最新の記録を確認してください。", true);
-        return;
-      }
-      const activities = day.activities.map((item, current) => current === index ? outingWithReturn(item, time) : item);
-      const nextDay = { ...day, activities, rev: crypto.randomUUID() };
-      await persistState({ ...ownerState, days: { ...ownerState.days, [departureDate]: nextDay } });
-      saved = true;
-      $("outing-return-dialog").close();
-      status("activity-saved-notice", displayDay(departureDate) + "の外出に、帰宅時刻 " + time + " を保存しました。");
-      $("add-activity").focus();
-    });
-    if (saved && ownerState.cloud) void synchronize();
-  } catch (error) {
-    status("outing-return-message", ownerError(error), true);
+  const rows = departureDate === editDate ? [...$("activity-list").children] : [];
+  const row = rows.find((candidate) => savedActivities.get(candidate) === activity)
+    ?? rows.find((candidate) => sameActivity(savedActivities.get(candidate), activity));
+  if (departureDate === editDate && (!row || !sameActivity(activityFromRow(row), activity))) {
+    message.textContent = "この外出は編集中です。一覧の行から帰宅時刻を保存できます。";
+    return;
+  }
+  const updated = outingWithReturn(activity, time, nextDay);
+  if (await updateSavedActivity(departureDate, activity, updated, message, row, true)) {
+    $("outing-return-dialog").close();
+    $("add-activity").focus();
   }
 }
+
+async function updateSavedActivity(date, original, activity, message, row, returning = false) {
+  if (!ownerKey || working || activitySavePending) {
+    message.textContent = "処理が終わってから、もう一度保存してください。";
+    return false;
+  }
+  const issue = activityTimeIssue(activity) || workBreakIssue(activity);
+  if (issue || !validActivity(activity)) {
+    message.textContent = issue || "行動の内容を確認してください。";
+    return false;
+  }
+  const day = ownerState.days[date];
+  let index = day?.activities.indexOf(original) ?? -1;
+  if (index < 0 && row) index = day?.activities.findIndex((item) => sameActivity(item, original)) ?? -1;
+  if (index < 0 || (date === editDate && !dayEquals(loadedDay, day))) {
+    message.textContent = "この日の記録が更新されました。最新の記録を確認してください。";
+    return false;
+  }
+  const record = { ...day, activities: day.activities.map((item, i) => i === index ? activity : item), rev: crypto.randomUUID() };
+  try {
+    const done = await runOwnerOperation("save", async () => {
+      await commitOwnerState({ ...ownerState, days: { ...ownerState.days, [date]: record } });
+      if (row) {
+        loadedDay = record;
+        row.remove();
+        const updatedRow = addActivity(activity);
+        if (!returning) updatedRow.querySelector("summary").focus({ preventScroll: true });
+      }
+      renderOvernightEditor();
+      renumberActivities();
+      renderRecent();
+      if (displayedPanel === "month") renderMonth();
+      status("activity-saved-notice", returning ? "帰宅時刻 " + activity.end + " を保存しました。"
+        : (activity.action || "行動") + "の変更を端末に保存しました。");
+    });
+    if (done && ownerState.cloud) void synchronize({ fromEditor: true });
+    return done;
+  } catch (error) {
+    message.textContent = ownerError(error);
+    return false;
+  }
+}
+
+const savedActivities = new WeakMap();
 
 function renderActivitySummary(row) {
   const activity = activityFromRow(row);
@@ -3368,6 +3444,7 @@ function renderActivitySummary(row) {
   row.querySelector(".start-time-label").textContent = outing ? "出発" : "開始";
   row.querySelector(".end-time-label").textContent = outing ? (overnight ? "帰宅（翌日）" : "帰宅")
     : overnight ? "終了（翌日）" : "終了";
+  row.querySelector(".save-activity-edit").disabled = sameActivity(activity, savedActivities.get(row));
   const issue = activityTimeIssue(activity);
   row.querySelector(".activity-time-error").textContent = issue;
   row.querySelector(".start-time").setAttribute("aria-invalid", String(Boolean(issue)));
@@ -3406,6 +3483,7 @@ function insertActivityRow(row, previousNext) {
 
 function addActivity(activity = {}, focus = false) {
   const row = $("activity-template").content.firstElementChild.cloneNode(true);
+  savedActivities.set(row, activity);
   row.open = focus;
   row.querySelector(".start-time").value = activity.start ?? "";
   row.querySelector(".end-time").value = activity.end ?? "";
@@ -3440,8 +3518,15 @@ function addActivity(activity = {}, focus = false) {
     start.dispatchEvent(new Event("input", { bubbles: true }));
     row.querySelector("summary").focus({ preventScroll: true });
   });
-  row.addEventListener("input", () => renderActivitySummary(row));
+  row.addEventListener("input", () => {
+    row.querySelector(".activity-edit-message").textContent = "";
+    renderActivitySummary(row);
+  });
+  row.addEventListener("toggle", refreshEditorControls);
   row.addEventListener("change", () => renderActivitySummary(row));
+  row.querySelector(".save-activity-edit").addEventListener("click", () => {
+    void updateSavedActivity(editDate, savedActivities.get(row), activityFromRow(row), row.querySelector(".activity-edit-message"), row);
+  });
   row.querySelector(".move-previous-night").addEventListener("click", () => void moveSleepToPreviousDay(row));
   row.querySelector(".remove-activity").addEventListener("click", () => {
     removedActivity = { row, next: row.nextElementSibling, date: editDate };
@@ -3456,6 +3541,7 @@ function addActivity(activity = {}, focus = false) {
   insertActivityRow(row);
   renderActivitySummary(row);
   if (focus) row.querySelector(".action").focus();
+  return row;
 }
 
 function refreshEditorControls() {
@@ -3464,7 +3550,12 @@ function refreshEditorControls() {
   renderActivityOverview(draft.activities);
   const activitiesChanged = !sameActivities(draft.activities, loadedDay?.activities ?? []);
   const hasOtherDraft = draft.note !== (loadedDay?.note ?? "") || activitiesChanged;
-  $("day-save-bar").hidden = !dirty || Boolean(pendingQuickSave && !hasOtherDraft && !quickSaveError);
+  const editedRows = activitiesChanged ? [...$("activity-list").children]
+    .filter((row) => savedActivities.has(row) && !sameActivity(activityFromRow(row), savedActivities.get(row))) : [];
+  const onlyInlineEdit = editedRows.length === 1 && editedRows[0].open && draft.activities.length === loadedDay?.activities.length
+    && draft.note === loadedDay.note && draft.mood === loadedDay.mood && draft.outside === (loadedDay.outside ?? null)
+    && !removedActivity && !quickSaveError && !working;
+  $("day-save-bar").hidden = !dirty || onlyInlineEdit || Boolean(pendingQuickSave && !hasOtherDraft && !quickSaveError);
   $("save-state").textContent = working === "save" ? "保存中…" : quickSaveError ? quickSaveError : pendingQuickSave ? "選択を保存しています…" : dirty ? "未保存の変更"
     : !loadedDay ? ""
     : ownerState?.cloud && !hasPending(ownerState) ? "共有済み" : "端末に保存済み";
@@ -3824,6 +3915,7 @@ async function saveNewActivity(activity, date = editDate) {
         $("outside-save-feedback").textContent = "外に出た · 端末に保存済み";
       }
       renumberActivities();
+      renderOutingReturns();
       renderRecent();
       if (displayedPanel === "month") renderMonth();
       $("activity-saved-notice").textContent = activity.action + "を端末に保存しました。";
@@ -4473,6 +4565,7 @@ async function initOwner() {
       }
       $("outing-return-time").value = minuteOfDay(now);
       refreshOutingReturn();
+      $("outing-return-form").requestSubmit();
     });
     $("outing-return-cancel").addEventListener("click", () => {
       if (working !== "save") $("outing-return-dialog").close();
