@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-U/qZLxxB5x69uluiKpsUtkONN+LS1j+GRnrBC7t/ftk='; style-src 'sha256-8TJnjpf/FYuTxZuUNGb5FEmvxbpsfm4U3E9at49UXTc='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-jzMyBInvgj0i8ZYGmj965nJHPRyKz+OS9gNC70KFF6s='; style-src 'sha256-u9ocRt7FkFZqMLV1wbNltaGyIfZM2zHn0SdY96ss/AQ='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -638,6 +638,9 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .quick-time > summary { display: list-item; padding-block: 10px; }
 .time-presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); gap: 6px; overflow: visible; }
 .time-presets .button { min-width: 0; min-height: 44px; padding-inline: 4px; }
+@media (max-width: 550px) {
+  .time-presets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 .time-row .field { min-width: 0; }
 .time-row input[type="time"] {
   -webkit-appearance: none;
@@ -970,6 +973,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                     <button type="button" class="button secondary" data-action="食事" aria-pressed="false">食事</button>
                     <button type="button" class="button secondary" data-action="仕事" data-reuse-time aria-pressed="false">仕事</button>
                     <button type="button" class="button secondary" data-action="睡眠" data-reuse-time aria-pressed="false">睡眠</button>
+                    <button type="button" class="button secondary" data-action="仮眠" aria-pressed="false">仮眠</button>
                     <button type="button" class="button secondary" data-action="外出" aria-pressed="false">外出</button>
                     <button type="button" class="button secondary" data-action="散歩" aria-pressed="false">散歩</button>
                     <button type="button" class="button secondary" data-action="欠勤" aria-pressed="false">欠勤</button>
@@ -2213,7 +2217,7 @@ function timeRange(activity, fromPrevious = false) {
 }
 
 function activityColor(action) {
-  return { "仕事": "#52668a", "昼休み": "#a58155", "睡眠": "#8c7c9b", "外出": "#668775" }[action] ?? "#63748b";
+  return { "仕事": "#52668a", "昼休み": "#a58155", "睡眠": "#8c7c9b", "仮眠": "#a36992", "外出": "#668775" }[action] ?? "#63748b";
 }
 
 function appendOvernightDetails(row, activity) {
@@ -2797,7 +2801,7 @@ function bindTimePicker() {
     $("add-selected-time").hidden = !selected;
     custom.setAttribute("aria-pressed", String(selected === custom));
     $("quick-time-error").hidden = absent;
-    $("add-selected-time").textContent = absent ? "欠勤を保存" : sleep ? "睡眠を保存"
+    $("add-selected-time").textContent = absent || sleep || action === "仮眠" ? action + "を保存"
       : outing ? (draft.start && !draft.end ? "出発を保存" : "外出を保存") : "この行動を保存";
     renderWorkBreakInput(breakControl, draft);
     $("add-selected-time").disabled = !canSaveComposer(draft);
