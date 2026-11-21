@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-jzMyBInvgj0i8ZYGmj965nJHPRyKz+OS9gNC70KFF6s='; style-src 'sha256-u9ocRt7FkFZqMLV1wbNltaGyIfZM2zHn0SdY96ss/AQ='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-5ERUgUng90hMVzCQgj7wemdRC/MFgWCuBSpFtZRkOEc='; style-src 'sha256-02hN6mK1S7QtjV/LV0MBEiIAwD4eTGZVrvGKpUSu5C8='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -262,6 +262,8 @@ legend { padding: 0; }
 .activity-title { font-variant-numeric: tabular-nums; }
 .time-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; }
 .time-row .field, .activity-info .field { margin: 0; }
+.time-row[data-single-time] { grid-template-columns: minmax(0, 14rem); }
+.time-row[data-single-time] > :not(:first-child) { display: none; }
 .time-arrow { color: var(--green); display: grid; place-items: center; block-size: 46px; }
 .activity-info { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
 .save-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 11px; margin-top: 18px; }
@@ -640,6 +642,7 @@ textarea { background: repeating-linear-gradient(#fffefb 0px, #fffefb 31px, #e8e
 .time-presets .button { min-width: 0; min-height: 44px; padding-inline: 4px; }
 @media (max-width: 550px) {
   .time-presets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  #custom-activity { grid-column: 1 / -1; }
 }
 .time-row .field { min-width: 0; }
 .time-row input[type="time"] {
@@ -976,6 +979,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                     <button type="button" class="button secondary" data-action="仮眠" aria-pressed="false">仮眠</button>
                     <button type="button" class="button secondary" data-action="外出" aria-pressed="false">外出</button>
                     <button type="button" class="button secondary" data-action="散歩" aria-pressed="false">散歩</button>
+                    <button type="button" class="button secondary" data-action="服薬" aria-pressed="false">服薬</button>
                     <button type="button" class="button secondary" data-action="欠勤" aria-pressed="false">欠勤</button>
                     <button type="button" class="button secondary" id="custom-activity" aria-pressed="false">その他</button>
                   </div>
@@ -985,7 +989,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                   </label>
                   <details id="quick-details" class="time-band"><summary id="quick-details-label"><span id="quick-preview">時間・場所を入れる（任意）</span></summary>
                   <button class="text-button" id="reuse-activity-time" type="button" hidden></button>
-                  <div class="time-row">
+                  <div class="time-row" id="quick-time-row">
                     <label class="field"><span><span id="quick-start-label">開始</span><small class="sleep-date" id="quick-start-date" hidden></small></span><input type="time" id="quick-start" step="60"></label>
                     <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
                     <label class="field"><span><span id="quick-end-label">終了</span><small class="sleep-date" id="quick-end-date" hidden></small></span><input type="time" id="quick-end" step="60"></label>
@@ -2210,6 +2214,7 @@ function overnightActivities(days, date) {
 function timeRange(activity, fromPrevious = false) {
   const { start, end, action } = activity;
   if (!start && !end) return "";
+  if (action === "服薬" && (!start || !end)) return start || end;
   if (!start) return "〜 " + end;
   if (!end) return start + (action === "外出" ? " 出発" : " 〜");
   if (fromPrevious) return "前日 " + start + " → " + end;
@@ -2692,7 +2697,7 @@ let refreshTimePresets = () => {};
 function activityComposerDraft() {
   const action = $("quick-action").value.trim();
   if (action === "欠勤") return { action, start: "", end: "", place: "" };
-  return activityWithBreak({ start: $("quick-start").value, end: $("quick-end").value,
+  return activityWithBreak({ start: $("quick-start").value, end: action === "服薬" ? "" : $("quick-end").value,
     place: action === "仕事" ? $("quick-work-place").value : $("quick-place").value.trim(), action }, $("quick-break-minutes").value);
 }
 
@@ -2777,7 +2782,9 @@ function bindTimePicker() {
     const outing = action === "外出";
     $("quick-now").hidden = !outing || editDate !== isoToday();
     $("quick-time-hint").textContent = overnightTimeHint(draft, date);
-    $("quick-start-label").textContent = sleep ? "寝た時刻" : outing ? "出発" : "開始";
+    const medication = action === "服薬";
+    $("quick-time-row").toggleAttribute("data-single-time", medication);
+    $("quick-start-label").textContent = medication ? "服薬時刻" : sleep ? "寝た時刻" : outing ? "出発" : "開始";
     $("quick-end-label").textContent = sleep ? "起きた時刻" : outing ? (overnight ? "帰宅（翌日）" : "帰宅（あとで入力可）")
       : overnight ? "終了（翌日）" : "終了";
     for (const [id, day] of [["quick-start-date", sleepStartDate], ["quick-end-date", endDate]]) {
@@ -2801,7 +2808,7 @@ function bindTimePicker() {
     $("add-selected-time").hidden = !selected;
     custom.setAttribute("aria-pressed", String(selected === custom));
     $("quick-time-error").hidden = absent;
-    $("add-selected-time").textContent = absent || sleep || action === "仮眠" ? action + "を保存"
+    $("add-selected-time").textContent = absent || sleep || medication || action === "仮眠" ? action + "を保存"
       : outing ? (draft.start && !draft.end ? "出発を保存" : "外出を保存") : "この行動を保存";
     renderWorkBreakInput(breakControl, draft);
     $("add-selected-time").disabled = !canSaveComposer(draft);
@@ -2871,7 +2878,7 @@ function bindTimePicker() {
 
   actionInput.addEventListener("input", () => {
     selected = custom;
-    if (["仕事", "睡眠", "外出"].includes(actionInput.value.trim())) details.open = true;
+    if (["仕事", "睡眠", "外出", "服薬"].includes(actionInput.value.trim())) details.open = true;
     if (actionInput.value.trim() !== "睡眠") night.checked = false;
     paint();
   });
@@ -3118,6 +3125,16 @@ function activityFromRow(row) {
     place: action === "仕事" ? row.querySelector(".work-place").value : row.querySelector(".place").value.trim(),
     action
   };
+  if (action === "服薬") {
+    const saved = savedActivities.get(row);
+    // Keep any older two-time record intact until its medication time is edited.
+    if (saved?.action === action && activity.start === (saved.start || saved.end)) {
+      activity.start = saved.start;
+      activity.end = saved.end;
+    } else {
+      activity.end = "";
+    }
+  }
   if (action === "外出" && activity.start && activity.end && row.querySelector(".next-day")?.checked) activity.nextDay = true;
   return activityWithBreak(activity, row.querySelector(".break-minutes").value);
 }
@@ -3445,7 +3462,9 @@ function renderActivitySummary(row) {
   clear.hidden = !start && !end && (action !== "仕事" || !rest.value.trim());
   clear.textContent = clearTimeLabel(rest);
   row.querySelector(".activity-summary").toggleAttribute("data-awaiting-return", outing && Boolean(start) && !end);
-  row.querySelector(".start-time-label").textContent = outing ? "出発" : "開始";
+  const medication = action === "服薬";
+  row.querySelector(".time-row").toggleAttribute("data-single-time", medication);
+  row.querySelector(".start-time-label").textContent = medication ? "服薬時刻" : outing ? "出発" : "開始";
   row.querySelector(".end-time-label").textContent = outing ? (overnight ? "帰宅（翌日）" : "帰宅")
     : overnight ? "終了（翌日）" : "終了";
   row.querySelector(".save-activity-edit").disabled = sameActivity(activity, savedActivities.get(row));
@@ -3489,8 +3508,9 @@ function addActivity(activity = {}, focus = false) {
   const row = $("activity-template").content.firstElementChild.cloneNode(true);
   savedActivities.set(row, activity);
   row.open = focus;
-  row.querySelector(".start-time").value = activity.start ?? "";
-  row.querySelector(".end-time").value = activity.end ?? "";
+  const medication = activity.action === "服薬";
+  row.querySelector(".start-time").value = medication ? activity.start || activity.end || "" : activity.start ?? "";
+  row.querySelector(".end-time").value = medication ? "" : activity.end ?? "";
   row.querySelector(".place").value = activity.place ?? "";
   if (activity.action === "仕事") {
     const place = activity.place ?? "";
