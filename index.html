@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-5ERUgUng90hMVzCQgj7wemdRC/MFgWCuBSpFtZRkOEc='; style-src 'sha256-02hN6mK1S7QtjV/LV0MBEiIAwD4eTGZVrvGKpUSu5C8='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-3XteYzcbbWeGI5rwJOjogSRrhQUo1hGByN7JgFAx47M='; style-src 'sha256-02hN6mK1S7QtjV/LV0MBEiIAwD4eTGZVrvGKpUSu5C8='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -2696,9 +2696,9 @@ let refreshTimePresets = () => {};
 
 function activityComposerDraft() {
   const action = $("quick-action").value.trim();
-  if (action === "欠勤") return { action, start: "", end: "", place: "" };
+  const place = action === "仕事" ? $("quick-work-place").value : action === "欠勤" ? "" : $("quick-place").value.trim();
   return activityWithBreak({ start: $("quick-start").value, end: action === "服薬" ? "" : $("quick-end").value,
-    place: action === "仕事" ? $("quick-work-place").value : $("quick-place").value.trim(), action }, $("quick-break-minutes").value);
+    place, action }, $("quick-break-minutes").value);
 }
 
 function activityDraftDirty() {
@@ -2772,7 +2772,8 @@ function bindTimePicker() {
     startInput.setAttribute("aria-invalid", String(Boolean(timeIssue)));
     endInput.setAttribute("aria-invalid", String(Boolean(timeIssue)));
     $("quick-work-location").hidden = action !== "仕事";
-    $("quick-general-location").hidden = action === "仕事";
+    const absent = action === "欠勤";
+    $("quick-general-location").hidden = action === "仕事" || absent;
     const sleep = action === "睡眠";
     const date = composerActivityDate(draft);
     const endDate = overnight ? adjacentDate(date, 1) : date;
@@ -2800,14 +2801,12 @@ function bindTimePicker() {
     const previous = priorTime();
     reuseTime.hidden = !previous || (startInput.value === previous.start && endInput.value === previous.end);
     reuseTime.textContent = previous ? "前回の " + timeRange(previous) + " を使う" : "";
-    const absent = action === "欠勤";
     const standard = selected && selected !== custom;
     details.toggleAttribute("data-preset", Boolean(standard));
     $("quick-action-field").hidden = Boolean(standard) || !selected;
-    details.hidden = absent || !selected;
+    details.hidden = !selected;
     $("add-selected-time").hidden = !selected;
     custom.setAttribute("aria-pressed", String(selected === custom));
-    $("quick-time-error").hidden = absent;
     $("add-selected-time").textContent = absent || sleep || medication || action === "仮眠" ? action + "を保存"
       : outing ? (draft.start && !draft.end ? "出発を保存" : "外出を保存") : "この行動を保存";
     renderWorkBreakInput(breakControl, draft);
@@ -2878,7 +2877,7 @@ function bindTimePicker() {
 
   actionInput.addEventListener("input", () => {
     selected = custom;
-    if (["仕事", "睡眠", "外出", "服薬"].includes(actionInput.value.trim())) details.open = true;
+    if (["仕事", "睡眠", "外出", "服薬", "欠勤"].includes(actionInput.value.trim())) details.open = true;
     if (actionInput.value.trim() !== "睡眠") night.checked = false;
     paint();
   });
