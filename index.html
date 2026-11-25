@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-MAst58XeO3L7skkUjnIWn/S1JtJbMnfl4WMHzndstk8='; style-src 'sha256-02hN6mK1S7QtjV/LV0MBEiIAwD4eTGZVrvGKpUSu5C8='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-xWdVZW8aq3pq6tBxuUVF87itepBaleGmPJuX/FeGG+s='; style-src 'sha256-HZXXvndVjwmiXrgDXBuLr90dyKKHTr3Nw3+oO144vIk='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -259,6 +259,11 @@ legend { padding: 0; }
 .activity { min-width: 0; padding: 8px 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: #f9fbf6; }
 .activity-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 8px; min-height: 44px; }
 .activity-heading h3 { margin: 0; }
+.night-sleep { margin: 6px 0 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; }
+.night-sleep h4 { margin: 0; }
+.night-sleep ul { padding: 0; margin: 4px 0 0; list-style: none; }
+.night-sleep li { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); }
+.night-sleep-time { font-variant-numeric: tabular-nums; }
 .activity-title { font-variant-numeric: tabular-nums; }
 .time-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; }
 .time-row .field, .activity-info .field { margin: 0; }
@@ -967,8 +972,12 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
               <section class="form-section" aria-labelledby="time-title">
                 <div class="activity-heading">
                   <h3 id="time-title">この日の行動</h3>
-                  <button type="button" class="text-button" id="log-last-night">昨夜の睡眠を記録</button>
+                  <button type="button" class="text-button" id="log-last-night" aria-controls="night-sleep">昨夜の睡眠を記録</button>
                 </div>
+                <section class="night-sleep" id="night-sleep" aria-labelledby="night-sleep-title" hidden>
+                  <h4 id="night-sleep-title"></h4>
+                  <ul id="night-sleep-list"></ul>
+                </section>
                 <div id="outing-returns" hidden></div>
                 <details class="quick-time" id="time-composer">
                   <summary id="add-activity">＋ したことを追加</summary>
@@ -2733,15 +2742,52 @@ function canSaveComposer(activity) {
     || Boolean(previousNightDate(activity)));
 }
 
-function savedPreviousNight() {
-  const days = visibleDays();
-  const previous = adjacentDate(editDate, -1);
-  const carried = days[previous]?.activities.find((activity) => activity.action === "睡眠" && crossesMidnight(activity));
-  if (carried) return { date: previous, activity: carried };
-  const morning = sortedActivities(days[editDate]?.activities ?? []).find((activity) =>
-    activity.action === "睡眠" && activity.start && activity.start < "06:00"
-    && !crossesMidnight(activity) && activityMinutes(activity) !== null);
-  return morning ? { date: editDate, activity: morning } : null;
+function savedPreviousNight(date, days) {
+  const previous = adjacentDate(date, -1);
+  if (!previous) return [];
+  return [previous, date].flatMap((day) => sortedActivities(days[day]?.activities ?? [])
+    .filter((activity) => {
+      if (activity.action !== "睡眠" || activityMinutes(activity) === null) return false;
+      return day === previous
+        ? crossesMidnight(activity) || activity.start >= "18:00"
+        : !crossesMidnight(activity) && activity.start < "06:00";
+    })
+    .map((activity) => ({ date: day, activity })));
+}
+
+function previousNightMinutes(date, records) {
+  let total = 0;
+  let previousEnd = -Infinity;
+  for (const record of records) {
+    const start = clockMinute(record.activity.start) - (record.date === date ? 0 : 1440);
+    const end = start + activityMinutes(record.activity);
+    total += Math.max(0, end - Math.max(start, previousEnd));
+    previousEnd = Math.max(previousEnd, end);
+  }
+  return total;
+}
+
+function renderPreviousNight(records, label) {
+  $("night-sleep-title").textContent = label + " " + durationText(previousNightMinutes(editDate, records))
+    + "（" + records.length + "件）";
+  $("night-sleep-list").replaceChildren(...records.map(({ date, activity }) => {
+    const row = node("li");
+    const fromPrevious = date !== editDate;
+    const times = (fromPrevious ? "前日 " : "当日 ") + activity.start + " → "
+      + (crossesMidnight(activity) ? "当日 " : "") + activity.end;
+    const edit = button("編集", "text-button", () => {
+      if (!chooseEditorDate(date)) return;
+      const rows = [...$("activity-list").children];
+      const entry = rows.find((item) => savedActivities.get(item) === activity)
+        ?? rows.find((item) => sameActivity(savedActivities.get(item), activity));
+      if (!entry) return;
+      entry.open = true;
+      entry.querySelector("summary").focus();
+    });
+    edit.setAttribute("aria-label", times + "の睡眠を編集");
+    row.append(node("span", "night-sleep-time", times), edit);
+    return row;
+  }));
 }
 
 function estimatedActivityEnd(action, start, days, date) {
@@ -2772,7 +2818,13 @@ function refreshComposerSummary() {
   const shortcut = $("log-last-night");
   shortcut.hidden = dirty || !adjacentDate(editDate, -1);
   const nightLabel = editDate === isoToday() ? "昨夜の睡眠" : "前夜の睡眠";
-  shortcut.textContent = nightLabel + (savedPreviousNight() ? "を開く" : "を記録");
+  const records = savedPreviousNight(editDate, visibleDays());
+  const panel = $("night-sleep");
+  if (shortcut.hidden || !records.length) panel.hidden = true;
+  shortcut.textContent = nightLabel + (!panel.hidden ? "を閉じる" : records.length ? "を開く" : "を記録");
+  if (records.length) shortcut.setAttribute("aria-expanded", String(!panel.hidden));
+  else shortcut.removeAttribute("aria-expanded");
+  if (!panel.hidden) renderPreviousNight(records, nightLabel);
   const summary = $("add-activity");
   const label = activitySavePending ? "保存待ち：" + draft.action
     : !$("time-composer").open && dirty ? "入力中：" + (draft.action || "したこと") : "＋ したことを追加";
@@ -2928,14 +2980,10 @@ function bindTimePicker() {
 
   $("log-last-night").addEventListener("click", () => {
     if (activityDraftDirty() || activitySavePending) return;
-    const existing = savedPreviousNight();
-    if (existing) {
-      if (!chooseEditorDate(existing.date)) return;
-      const row = [...$("activity-list").children].find((item) => savedActivities.get(item) === existing.activity);
-      if (row) {
-        row.open = true;
-        row.querySelector("summary").focus();
-      }
+    if (savedPreviousNight(editDate, visibleDays()).length) {
+      const panel = $("night-sleep");
+      panel.hidden = !panel.hidden;
+      refreshComposerSummary();
       return;
     }
     selected = presets.find((preset) => preset.dataset.action === "睡眠");
@@ -3702,6 +3750,7 @@ function fillEditor(date, keepComposer = false) {
   cancelQuickSave();
   quickSaveError = "";
   editDate = date;
+  $("night-sleep").hidden = true;
   $("mood-save-feedback").textContent = $("outside-save-feedback").textContent = "";
   removedActivity = undefined;
   $("undo-activity").hidden = true;
