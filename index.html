@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Asf7e324qSTlGUyfGPAGPZ+BrZ1JrVqlIvmFFEXEbgc='; style-src 'sha256-02hN6mK1S7QtjV/LV0MBEiIAwD4eTGZVrvGKpUSu5C8='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-MAst58XeO3L7skkUjnIWn/S1JtJbMnfl4WMHzndstk8='; style-src 'sha256-02hN6mK1S7QtjV/LV0MBEiIAwD4eTGZVrvGKpUSu5C8='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -2226,13 +2226,18 @@ function activityColor(action) {
   return { "仕事": "#52668a", "昼休み": "#a58155", "睡眠": "#8c7c9b", "仮眠": "#a36992", "外出": "#668775" }[action] ?? "#63748b";
 }
 
+function carriedSleepDuration(activity) {
+  return "この日 " + durationText(clockMinute(activity.end)) + "・全体 " + durationText(activityMinutes(activity));
+}
+
 function appendOvernightDetails(row, activity) {
   const title = [activity.action || "行動", activity.place].filter(Boolean).join(" · ");
   if (activity.action === "睡眠") {
     const line = node("div", "timeline-line");
     line.append(node("span", "timeline-time", timeRange(activity, true)),
-      node("span", "overnight-total", "計" + durationText(activityMinutes(activity))));
-    row.append(node("p", "timeline-action", title), line);
+      node("span", "overnight-total", carriedSleepDuration(activity)));
+    const label = ["前日からの睡眠", activity.place].filter(Boolean).join(" · ");
+    row.append(node("p", "timeline-action", label), line);
   } else {
     row.append(node("p", "timeline-action", title + "（前日から）"),
       node("p", "timeline-time", "00:00 → " + activity.end),
@@ -2256,10 +2261,15 @@ function activityTimeline(activities, overnight) {
     const row = node("li");
     const line = node("div", "timeline-line");
     const overnightSleep = activity.action === "睡眠" && crossesMidnight(activity);
-    line.append(node("span", "timeline-action", (activity.action || "行動") + (carried && !overnightSleep ? "（前日から）" : "")));
+    const label = carried && overnightSleep ? "前日からの睡眠"
+      : (activity.action || "行動") + (carried ? "（前日から）" : "");
+    line.append(node("span", "timeline-action", label));
     const time = carried && !overnightSleep ? "00:00 → " + activity.end : timeRange(activity, carried);
     if (time) line.append(node("span", "timeline-time", time));
-    if (overnightSleep) line.append(node("span", "overnight-total", "計" + durationText(activityMinutes(activity))));
+    if (overnightSleep) {
+      const duration = carried ? carriedSleepDuration(activity) : "全体 " + durationText(activityMinutes(activity));
+      line.append(node("span", "overnight-total", duration));
+    }
     row.append(line);
     const work = carried ? "" : workTimeText(activity);
     if (work) row.append(node("p", "work-time-summary", work));
@@ -2724,8 +2734,14 @@ function canSaveComposer(activity) {
 }
 
 function savedPreviousNight() {
+  const days = visibleDays();
   const previous = adjacentDate(editDate, -1);
-  return visibleDays()[previous]?.activities.find((activity) => activity.action === "睡眠" && crossesMidnight(activity));
+  const carried = days[previous]?.activities.find((activity) => activity.action === "睡眠" && crossesMidnight(activity));
+  if (carried) return { date: previous, activity: carried };
+  const morning = sortedActivities(days[editDate]?.activities ?? []).find((activity) =>
+    activity.action === "睡眠" && activity.start && activity.start < "06:00"
+    && !crossesMidnight(activity) && activityMinutes(activity) !== null);
+  return morning ? { date: editDate, activity: morning } : null;
 }
 
 function estimatedActivityEnd(action, start, days, date) {
@@ -2914,8 +2930,8 @@ function bindTimePicker() {
     if (activityDraftDirty() || activitySavePending) return;
     const existing = savedPreviousNight();
     if (existing) {
-      if (!chooseEditorDate(adjacentDate(editDate, -1))) return;
-      const row = [...$("activity-list").children].find((item) => savedActivities.get(item) === existing);
+      if (!chooseEditorDate(existing.date)) return;
+      const row = [...$("activity-list").children].find((item) => savedActivities.get(item) === existing.activity);
       if (row) {
         row.open = true;
         row.querySelector("summary").focus();
