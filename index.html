@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7f6ef">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-3XteYzcbbWeGI5rwJOjogSRrhQUo1hGByN7JgFAx47M='; style-src 'sha256-02hN6mK1S7QtjV/LV0MBEiIAwD4eTGZVrvGKpUSu5C8='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Asf7e324qSTlGUyfGPAGPZ+BrZ1JrVqlIvmFFEXEbgc='; style-src 'sha256-02hN6mK1S7QtjV/LV0MBEiIAwD4eTGZVrvGKpUSu5C8='; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
   <title>日々の足あと</title>
   <style>
 :root {
@@ -994,6 +994,7 @@ body[data-mode="reader"] .journal-status { flex-wrap: wrap; justify-content: fle
                     <span class="time-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h17m-6-6 6 6-6 6"/></svg></span>
                     <label class="field"><span><span id="quick-end-label">終了</span><small class="sleep-date" id="quick-end-date" hidden></small></span><input type="time" id="quick-end" step="60"></label>
                   </div>
+                  <button class="text-button" id="clear-suggested-end" type="button" hidden>終了の目安を外す</button>
                   <div class="time-now-row" id="quick-now" hidden>
                     <button class="text-button time-now" id="quick-start-now" type="button" aria-label="出発時刻に今を入れる">今</button>
                     <button class="text-button time-now" id="quick-end-now" type="button" aria-label="帰宅時刻に今を入れる">今</button>
@@ -2719,7 +2720,34 @@ function composerActivityDate(activity) {
 
 function canSaveComposer(activity) {
   return canSaveActivity(activity) && (activity.action !== "睡眠" || !$("quick-previous-night").checked
-    || Boolean(activity.start && activity.end));
+    || Boolean(previousNightDate(activity)));
+}
+
+function savedPreviousNight() {
+  const previous = adjacentDate(editDate, -1);
+  return visibleDays()[previous]?.activities.find((activity) => activity.action === "睡眠" && crossesMidnight(activity));
+}
+
+function estimatedActivityEnd(action, start, days, date) {
+  if (!action || action === "服薬" || !start || !validTime(start)) return "";
+  const recent = [];
+  for (const day of datesNewest(days)) {
+    if (day > date) continue;
+    for (const activity of sortedActivities(days[day].activities).reverse()) {
+      if (activity.action !== action) continue;
+      const minutes = activityMinutes(activity);
+      if (minutes !== null && minutes < 1440) recent.push(minutes);
+      if (recent.length === 8) break;
+    }
+    if (recent.length === 8) break;
+  }
+  if (!recent.length) return "";
+  recent.sort((a, b) => a - b);
+  const middle = Math.floor(recent.length / 2);
+  const median = (recent[middle] + recent[Math.floor((recent.length - 1) / 2)]) / 2;
+  const duration = Math.max(5, Math.min(1435, Math.round(median / 5) * 5));
+  const end = (clockMinute(start) + duration) % 1440;
+  return [Math.floor(end / 60), end % 60].map((part) => String(part).padStart(2, "0")).join(":");
 }
 
 function refreshComposerSummary() {
@@ -2727,7 +2755,8 @@ function refreshComposerSummary() {
   const dirty = Object.values(draft).some(Boolean);
   const shortcut = $("log-last-night");
   shortcut.hidden = dirty || !adjacentDate(editDate, -1);
-  shortcut.textContent = editDate === isoToday() ? "昨夜の睡眠を記録" : "前夜の睡眠を記録";
+  const nightLabel = editDate === isoToday() ? "昨夜の睡眠" : "前夜の睡眠";
+  shortcut.textContent = nightLabel + (savedPreviousNight() ? "を開く" : "を記録");
   const summary = $("add-activity");
   const label = activitySavePending ? "保存待ち：" + draft.action
     : !$("time-composer").open && dirty ? "入力中：" + (draft.action || "したこと") : "＋ したことを追加";
@@ -2737,6 +2766,8 @@ function refreshComposerSummary() {
 function bindTimePicker() {
   let selected = null;
   let cancelledDraft;
+  let estimatedEnd = false;
+  let endEdited = false;
   const actionInput = $("quick-action");
   const placeInput = $("quick-place");
   const workPlace = $("quick-work-place");
@@ -2756,6 +2787,12 @@ function bindTimePicker() {
   const priorTime = () => presets.find((preset) => preset.dataset.action === actionInput.value.trim()
     && preset.dataset.start && preset.dataset.end)?.dataset;
 
+  function suggestEnd() {
+    if (endEdited || (endInput.value && !estimatedEnd)) return;
+    endInput.value = estimatedActivityEnd(actionInput.value.trim(), startInput.value, visibleDays(), editDate);
+    estimatedEnd = Boolean(endInput.value);
+  }
+
   function paint() {
     if (cancelledDraft && activityDraftDirty()) setCancelledDraft(undefined);
     const draft = activityComposerDraft();
@@ -2767,8 +2804,10 @@ function bindTimePicker() {
     const clear = $("clear-quick-time");
     clear.hidden = !range && (action !== "仕事" || !breakInput.value.trim());
     clear.textContent = clearTimeLabel(breakInput);
+    const invalidPreviousNight = action === "睡眠" && night.checked && draft.start && draft.end && !overnight;
     $("quick-time-error").textContent = timeIssue
-      ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。" : "";
+      ? "開始と終了が同じです。時刻を直すか、時刻なしで保存できます。"
+      : invalidPreviousNight ? "日付をまたぐ時刻を入れるか、「前日の夜から」を外してください。" : "";
     startInput.setAttribute("aria-invalid", String(Boolean(timeIssue)));
     endInput.setAttribute("aria-invalid", String(Boolean(timeIssue)));
     $("quick-work-location").hidden = action !== "仕事";
@@ -2788,11 +2827,14 @@ function bindTimePicker() {
     $("quick-start-label").textContent = medication ? "服薬時刻" : sleep ? "寝た時刻" : outing ? "出発" : "開始";
     $("quick-end-label").textContent = sleep ? "起きた時刻" : outing ? (overnight ? "帰宅（翌日）" : "帰宅（あとで入力可）")
       : overnight ? "終了（翌日）" : "終了";
+    if (estimatedEnd) $("quick-end-label").textContent += "・目安";
+    $("clear-suggested-end").hidden = !estimatedEnd;
+    $("clear-suggested-end").textContent = outing ? "帰宅時刻を空欄にする" : "終了の目安を外す";
     for (const [id, day] of [["quick-start-date", sleepStartDate], ["quick-end-date", endDate]]) {
       $(id).hidden = !showSleepDates;
       $(id).textContent = showSleepDates ? displayDay(day) : "";
     }
-    $("quick-night-option").hidden = !previousNightDate(draft) && !pendingNight;
+    $("quick-night-option").hidden = !sleep || !(night.checked || previousNightDate(draft));
     const time = minutes !== null && action !== "仕事" ? range + "（" + durationText(minutes) + "）" : range;
     const preview = [time, action === "仕事" ? "" : draft.place]
       .filter(Boolean).join(" · ");
@@ -2822,6 +2864,7 @@ function bindTimePicker() {
 
   function resetComposer() {
     selected = null;
+    estimatedEnd = endEdited = false;
     for (const input of inputs) input.value = "";
     workPlace.value = "在宅";
     $("quick-previous-night").checked = false;
@@ -2849,6 +2892,7 @@ function bindTimePicker() {
       actionInput.value = selected?.dataset.action ?? "";
       if (selected) details.open = true;
       if (actionInput.value !== "睡眠") night.checked = false;
+      suggestEnd();
       status("activity-save-message");
       paint();
     });
@@ -2860,6 +2904,7 @@ function bindTimePicker() {
       selected = custom;
     }
     night.checked = actionInput.value.trim() === "睡眠" && night.checked;
+    suggestEnd();
     status("activity-save-message");
     paint();
     actionInput.focus();
@@ -2867,6 +2912,16 @@ function bindTimePicker() {
 
   $("log-last-night").addEventListener("click", () => {
     if (activityDraftDirty() || activitySavePending) return;
+    const existing = savedPreviousNight();
+    if (existing) {
+      if (!chooseEditorDate(adjacentDate(editDate, -1))) return;
+      const row = [...$("activity-list").children].find((item) => savedActivities.get(item) === existing);
+      if (row) {
+        row.open = true;
+        row.querySelector("summary").focus();
+      }
+      return;
+    }
     selected = presets.find((preset) => preset.dataset.action === "睡眠");
     actionInput.value = "睡眠";
     night.checked = true;
@@ -2879,6 +2934,7 @@ function bindTimePicker() {
     selected = custom;
     if (["仕事", "睡眠", "外出", "服薬", "欠勤"].includes(actionInput.value.trim())) details.open = true;
     if (actionInput.value.trim() !== "睡眠") night.checked = false;
+    suggestEnd();
     paint();
   });
   for (const input of inputs) {
@@ -2899,16 +2955,34 @@ function bindTimePicker() {
     if (!previous) return;
     startInput.value = previous.start;
     endInput.value = previous.end;
+    estimatedEnd = false;
+    endEdited = true;
     paint();
     focusTime();
   });
   for (const [buttonId, input] of [["quick-start-now", startInput], ["quick-end-now", endInput]]) {
     $(buttonId).addEventListener("click", () => {
-      if (putOutingTimeNow(input, startInput, endInput, $("quick-time-error"))) paint();
+      if (!putOutingTimeNow(input, startInput, endInput, $("quick-time-error"))) return;
+      if (input === endInput) {
+        estimatedEnd = false;
+        endEdited = true;
+      } else if (estimatedEnd) {
+        endInput.value = "";
+        estimatedEnd = false;
+      }
+      paint();
     });
   }
+  $("clear-suggested-end").addEventListener("click", () => {
+    endInput.value = "";
+    estimatedEnd = false;
+    endEdited = true;
+    paint();
+    endInput.focus({ preventScroll: true });
+  });
   $("clear-quick-time").addEventListener("click", () => {
     clearActivityTimes(startInput, endInput, breakInput);
+    estimatedEnd = endEdited = false;
     night.checked = false;
     paint();
     focusTime();
@@ -2916,7 +2990,7 @@ function bindTimePicker() {
   $("cancel-activity").addEventListener("click", () => {
     const draft = activityDraftDirty() ? {
       values: inputs.map((input) => input.value), selected, detailsOpen: details.open,
-      previousNight: $("quick-previous-night").checked, workPlace: workPlace.value
+      previousNight: $("quick-previous-night").checked, workPlace: workPlace.value, estimatedEnd, endEdited
     } : cancelledDraft;
     resetComposer();
     composer.open = false;
@@ -2937,6 +3011,7 @@ function bindTimePicker() {
     inputs.forEach((input, index) => { input.value = draft.values[index]; });
     workPlace.value = draft.workPlace;
     selected = draft.selected;
+    ({ estimatedEnd, endEdited } = draft);
     composer.open = true;
     details.open = draft.detailsOpen;
     $("quick-previous-night").checked = draft.previousNight;
@@ -2944,9 +3019,16 @@ function bindTimePicker() {
     $("add-activity").focus();
   });
 
-  for (const input of [startInput, endInput]) {
-    input.addEventListener("input", paint);
-    input.addEventListener("change", paint);
+  for (const event of ["input", "change"]) {
+    startInput.addEventListener(event, () => {
+      suggestEnd();
+      paint();
+    });
+    endInput.addEventListener(event, () => {
+      estimatedEnd = false;
+      endEdited = true;
+      paint();
+    });
   }
   $("add-selected-time").addEventListener("click", async () => {
     const activity = activityComposerDraft();
@@ -3975,7 +4057,7 @@ async function saveEntry(event, syncAfter = true, includeActivity = false) {
   if (saveActivityDraft) {
     const activity = activityComposerDraft();
     if (!canSaveComposer(activity)) {
-      status("save-message", activityTimeIssue(activity) || workBreakIssue(activity) || "入力中の行動の名前と時刻を確認してください。", true);
+      status("save-message", activityTimeIssue(activity) || workBreakIssue(activity) || $("quick-time-error").textContent || "入力中の行動の名前と時刻を確認してください。", true);
       return false;
     }
     const date = composerActivityDate(activity);
